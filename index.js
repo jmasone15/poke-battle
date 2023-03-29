@@ -9,6 +9,7 @@
 // Once all health gone, award winner.
 
 import inquirer from "inquirer";
+import { Pokemon, Stats, Move, typeObject, typeMatrix} from "./classes";
 
 const init = async () => {
     const { pokemon } = await inquirer.prompt([
