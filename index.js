@@ -1,5 +1,5 @@
-// User picks a pokemon - Done
-// System creates user/sys pokemon objects
+// User picks a pokemon - DONE
+// System creates user/sys pokemon objects - DONE
 // Battle starts
 // User/Sys selects move.
 // Order Determination
@@ -11,7 +11,7 @@
 import inquirer from "inquirer";
 import axios from "axios";
 import { Pokemon, Stats, Move } from "./classes.js";
-import { filterMoveSet, removeArrayElementByProperty, axiosGetData, randomInt } from "./helpers.js"
+import { filterMoveSet, removeArrayElementByProperty, axiosGetData, randomInt, delay, colorLog } from "./helpers.js"
 
 // Program Entry Function
 const init = async () => {
@@ -23,11 +23,11 @@ const init = async () => {
     const userPokemon = await createPokemon(pokemon, false);
     const sysPokemon = await createPokemon("caterpie", true);
 
-    console.log(userPokemon);
-    console.log(sysPokemon);
+    // Pokemon Battle
+    await startBattle(userPokemon, sysPokemon);
 };
 
-// Sub Functions
+// Pokemon Creation Sub-Functions
 const createPokemon = async (pokemon, isSys) => {
     const data = await axiosGetData(axios, `https://pokeapi.co/api/v2/pokemon/${pokemon}`);
     const moves = await selectMoves(data, isSys);
@@ -86,7 +86,7 @@ const selectMoves = async ({ moves }, autoSelect) => {
             }
         }
 
-    // User-Selected Pokemon Moves
+        // User-Selected Pokemon Moves
     } else {
         for (let i = 0; i < 4; i++) {
             if (refactoredMoves.length > 0) {
@@ -154,6 +154,26 @@ const createPokeClass = ({ name, types, stats }, moves) => {
     });
 
     return new Pokemon(name, firstType.type.name, !secondType ? "" : secondType.type.name, chosenStats, moves);
+}
+
+// Pokemon Battle Sub-Functions
+const startBattle = async (user, system) => {
+    const userNameText = colorLog("User", "green", false);
+    const sysNameText = colorLog("System", "red", true);
+
+    console.log(system.name);
+
+    const textArray = [
+        "Pokemon Battle!", 
+        `${userNameText} vs. ${sysNameText}`, 
+        `Go ${colorLog(user.name, "magenta", false)}!`, 
+        `${sysNameText} sends out ${colorLog(system.name, "magenta", false)}`
+    ];
+
+    for (let i = 0; i < textArray.length; i++) {
+        console.log(textArray[i]);
+        await delay(1500);
+    }
 }
 
 init();

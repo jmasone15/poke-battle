@@ -148,11 +148,50 @@ const randomInt = (max) => {
     return Math.floor(Math.random() * max)
 }
 
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+const colorLog = (text, color, isBright) => {
+    let colorText;
+
+    switch (color) {
+        case "black":
+            colorText = `\u001b[30${isBright ? ";1" : ""}m`
+            break;
+        case "red":
+            colorText = `\u001b[31${isBright ? ";1" : ""}m`
+            break;
+        case "green":
+            colorText = `\u001b[32${isBright ? ";1" : ""}m`
+            break;
+        case "yellow":
+            colorText = `\u001b[33${isBright ? ";1" : ""}m`
+            break;
+        case "blue":
+            colorText = `\u001b[34${isBright ? ";1" : ""}m`
+            break;
+        case "magenta":
+            colorText = `\u001b[35${isBright ? ";1" : ""}m`
+            break;
+        case "cyan":
+            colorText = `\u001b[36${isBright ? ";1" : ""}m`
+            break;
+        case "white":
+            colorText = `\u001b[37${isBright ? ";1" : ""}m`
+            break;
+        default:
+            break;
+    }
+
+    return `${colorText}${text}\u001b[0m`
+}
+
 export {
     typeObject,
     typeMatrix,
     filterMoveSet,
     removeArrayElementByProperty,
     axiosGetData,
-    randomInt
+    randomInt,
+    delay,
+    colorLog
 }
