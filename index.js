@@ -1,4 +1,4 @@
-// User picks a pokemon
+// User picks a pokemon - Done
 // System creates user/sys pokemon objects
 // Battle starts
 // User/Sys selects move.
@@ -11,20 +11,29 @@
 import inquirer from "inquirer";
 import axios from "axios";
 import { Pokemon, Stats, Move } from "./classes.js";
-import { filterMoveSet, removeArrayElementByProperty } from "./helpers.js"
+import { filterMoveSet, removeArrayElementByProperty, axiosGetData, randomInt } from "./helpers.js"
 
 // Program Entry Function
 const init = async () => {
 
+    // Inquirer Pokemon Select
     const pokemon = await selectPokemon();
-    const { data } = await axios.get(`https://pokeapi.co/api/v2/pokemon/${pokemon}`);
-    const moves = await selectMoves(data);
-    const chosenPokemon = createPokeClass(data, moves);
 
-    console.log(chosenPokemon);
+    // Pokemon Creation
+    const userPokemon = await createPokemon(pokemon, false);
+    const sysPokemon = await createPokemon("caterpie", true);
+
+    console.log(userPokemon);
+    console.log(sysPokemon);
 };
 
 // Sub Functions
+const createPokemon = async (pokemon, isSys) => {
+    const data = await axiosGetData(axios, `https://pokeapi.co/api/v2/pokemon/${pokemon}`);
+    const moves = await selectMoves(data, isSys);
+
+    return createPokeClass(data, moves);
+}
 const selectPokemon = async () => {
     const { pokemon } = await inquirer.prompt([
         {
@@ -44,38 +53,75 @@ const selectPokemon = async () => {
 
     return pokemon
 }
-const selectMoves = async ({ moves }) => {
+const selectMoves = async ({ moves }, autoSelect) => {
     let selectedMoves = [];
     const filteredMoves = filterMoveSet(moves);
     let refactoredMoves = filteredMoves.map(x => { return { name: x.move.name, value: x.move.url } });
 
-    for (let i = 0; i < 4; i++) {
-        const { move } = await inquirer.prompt([
-            {
-                type: "list",
-                name: "move",
-                choices: refactoredMoves,
-                message: "Select the first pokemon move.",
-                pageSize: 10,
-                loop: false,
-                validate: (input) => {
-                    if (!input) {
-                        return "A selection is required."
-                    } else {
-                        return true
-                    }
+    // System Pokemon Moves
+    if (autoSelect) {
+        let indexArray = [];
+
+        if (refactoredMoves.length > 4) {
+            for (let i = 0; i < 4; i++) {
+                const idx = randomInt(refactoredMoves.length);
+
+                if (!indexArray.includes(idx)) {
+                    indexArray.push(idx)
+                } else {
+                    i--
+                    continue
                 }
             }
-        ]);
 
-        const { data } = await axios.get(move);
-        const newMove = new Move(data.name, data.type.name, data.power, data.pp, data.damage_class.name, data.accuracy);
+            for (let i = 0; i < indexArray.length; i++) {
+                const newMove = await createMoveClass(refactoredMoves[indexArray[i]].value);
+                selectedMoves.push(newMove)
+            }
 
-        selectedMoves.push(newMove);
-        removeArrayElementByProperty(refactoredMoves, "name", newMove.name);
+        } else {
+            for (let i = 0; i < refactoredMoves.length; i++) {
+                const newMove = await createMoveClass(refactoredMoves[i].value);
+                selectedMoves.push(newMove)
+            }
+        }
+
+    // User-Selected Pokemon Moves
+    } else {
+        for (let i = 0; i < 4; i++) {
+            if (refactoredMoves.length > 0) {
+                const { move } = await inquirer.prompt([
+                    {
+                        type: "list",
+                        name: "move",
+                        choices: refactoredMoves,
+                        message: `Pokemon Move #${i + 1}`,
+                        pageSize: 10,
+                        loop: false,
+                        validate: (input) => {
+                            if (!input) {
+                                return "A selection is required."
+                            } else {
+                                return true
+                            }
+                        }
+                    }
+                ]);
+
+                const newMove = await createMoveClass(move);
+                selectedMoves.push(newMove);
+                removeArrayElementByProperty(refactoredMoves, "name", newMove.name);
+            } else {
+                break;
+            }
+        }
     }
 
     return selectedMoves;
+}
+const createMoveClass = async (url) => {
+    const moveData = await axiosGetData(axios, url);
+    return new Move(moveData.name, moveData.type.name, moveData.power, moveData.pp, moveData.damage_class.name, moveData.accuracy);
 }
 const createPokeClass = ({ name, types, stats }, moves) => {
     const firstType = types.filter(x => x.slot == 1)[0];

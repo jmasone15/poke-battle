@@ -134,9 +134,25 @@ const removeArrayElementByProperty = (array, property, value) => {
     )
 }
 
+const axiosGetData = async (axios, url) => {
+    try {
+        const { data } = await axios.get(url);
+        return data
+    } catch (error) {
+        console.error(error);
+        return {}
+    }
+}
+
+const randomInt = (max) => {
+    return Math.floor(Math.random() * max)
+}
+
 export {
     typeObject,
     typeMatrix,
     filterMoveSet,
-    removeArrayElementByProperty
+    removeArrayElementByProperty,
+    axiosGetData,
+    randomInt
 }
