@@ -23,18 +23,20 @@ class Stats {
 }
 
 class Move {
-    constructor(name, type, power, pp, damageClass, accuracy) {
+    constructor(name, type, power, pp, damageClass, accuracy, priority, critRate) {
         this.name = name;
         this.type = type;
         this.power = power;
         this.pp = pp;
         this.damageClass = damageClass;
         this.accuracy = accuracy;
+        this.priority = priority;
+        this.critRate = critRate;
     }
 }
 
 export {
     Pokemon,
     Stats,
-    Move
+    Move,
 }

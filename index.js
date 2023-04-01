@@ -1,32 +1,29 @@
-// User picks a pokemon - DONE
-// System creates user/sys pokemon objects - DONE
-// Battle starts
-// User/Sys selects move.
-// Order Determination
-// Move Execution
-// Health Check
-// Return to Select Move
-// Once all health gone, award winner.
+// Status change moves
+// Ailments
+// Move meta data (flinch, self-stat increase, effects)
+// Weather
 
 import inquirer from "inquirer";
 import axios from "axios";
 import { Pokemon, Stats, Move } from "./classes.js";
-// import { filterMoveSet, removeArrayElementByProperty, axiosGetData, randomInt, delay, colorLog } from "./helpers.js";
 import helpers from "./helpers.js";
 
 // Program Entry Function
 const init = async () => {
+    console.clear();
 
     // Inquirer Pokemon Select
-    const pokemon = await selectPokemon();
+    let pokemon = await selectPokemon();
 
     // Pokemon Creation
-    const userPokemon = await createPokemon(pokemon, false);
-    const sysPokemon = await createPokemon("caterpie", true);
+    let userPokemon = await createPokemon(pokemon, false);
+    let sysPokemon = await createPokemon("caterpie", true);
 
     // Pokemon Battle
-    await startBattle(userPokemon, sysPokemon);
-    await battleMovePrompt(userPokemon.moves);
+    await battleSequence(userPokemon, sysPokemon);
+
+    // End Game
+    await endGame(userPokemon, sysPokemon);
 };
 
 // Pokemon Creation Sub-Functions
@@ -112,7 +109,7 @@ const selectMoves = async ({ moves }, autoSelect) => {
 
                 const newMove = await createMoveClass(move);
                 selectedMoves.push(newMove);
-                helpers.removeArrayElementByProperty(refactoredMoves, "name", newMove.name);
+                helpers.findArrayElementByProp(refactoredMoves, "name", newMove.name, true);
             } else {
                 break;
             }
@@ -123,7 +120,16 @@ const selectMoves = async ({ moves }, autoSelect) => {
 }
 const createMoveClass = async (url) => {
     const moveData = await helpers.axiosGetData(axios, url);
-    return new Move(moveData.name, moveData.type.name, moveData.power, moveData.pp, moveData.damage_class.name, moveData.accuracy);
+    return new Move(
+        moveData.name,
+        moveData.type.name,
+        moveData.power,
+        moveData.pp,
+        moveData.damage_class.name,
+        moveData.accuracy,
+        moveData.priority,
+        moveData.meta.crit_rate
+    );
 }
 const createPokeClass = ({ name, types, stats }, moves) => {
     const firstType = types.filter(x => x.slot == 1)[0];
@@ -159,11 +165,12 @@ const createPokeClass = ({ name, types, stats }, moves) => {
 }
 
 // Pokemon Battle Sub-Functions
-const startBattle = async (user, system) => {
+const battleSequence = async (userPokemon, sysPokemon) => {
+
     const userNameText = helpers.colorLog("User", "green", false);
     const sysNameText = helpers.colorLog("System", "red", true);
-    const userPokeName = helpers.colorLog(helpers.pascalCase(user.name), "magenta", false);
-    const sysPokeName = helpers.colorLog(helpers.pascalCase(system.name), "magenta", false);
+    const userPokeName = helpers.colorLog(helpers.pascalCase(userPokemon.name), "magenta", false);
+    const sysPokeName = helpers.colorLog(helpers.pascalCase(sysPokemon.name), "magenta", false);
 
     const textArray = [
         "Pokemon Battle!",
@@ -171,27 +178,63 @@ const startBattle = async (user, system) => {
         `Go ${userPokeName}!`,
         `${sysNameText} sends out ${sysPokeName}`
     ];
+
+    await helpers.delay(1500);
+    console.clear();
+
     for (let i = 0; i < textArray.length; i++) {
         console.log(textArray[i]);
         await helpers.delay(1500);
     }
 
+    while (true) {
+        console.clear();
+        let { userMove, systemMove } = await battleMoves(userPokemon.moves, sysPokemon.moves);
+        let userFirst = doesUserMoveFirst(userPokemon, sysPokemon, userMove, systemMove);
 
-}
-const battleMovePrompt = async (moves) => {
-    let moveArray = [];
+        // First Move
+        const moveOneResult = await executeMove(
+            userFirst ? userPokemon : sysPokemon,
+            userFirst ? sysPokemon : userPokemon,
+            userFirst ? userMove : systemMove
+        );
+        await helpers.delay(1500);
 
-    for (let i = 0; i < moves.length; i++) {
-        moveArray.push({
-            name: `${helpers.pascalCase(moves[i].name)} [${moves[i].type}]`,
-            value: moves[i].name
-        })
+        if (!moveOneResult) {
+            break;
+        }
+
+        // Second Move
+        const moveTwoResult = await executeMove(
+            userFirst ? sysPokemon : userPokemon,
+            userFirst ? userPokemon : sysPokemon,
+            userFirst ? systemMove : userMove
+        );
+        await helpers.delay(1500);
+
+        if (!moveTwoResult) {
+            break;
+        }
     }
 
-    const { selection } = await inquirer.prompt([
+    return;
+}
+const battleMoves = async (userMoves, systemMoves) => {
+    let moveArray = [];
+
+    for (let i = 0; i < userMoves.length; i++) {
+        if (userMoves[i].pp > 0) {
+            moveArray.push({
+                name: `${helpers.pascalCase(userMoves[i].name)} [${userMoves[i].type}]`,
+                value: userMoves[i].name
+            })
+        }
+    }
+
+    const { userMoveText } = await inquirer.prompt([
         {
             type: "list",
-            name: "selection",
+            name: "userMoveText",
             message: "Select a Move",
             choices: moveArray,
             validate: (input) => {
@@ -204,7 +247,114 @@ const battleMovePrompt = async (moves) => {
         }
     ]);
 
-    console.log(selection);
+    const userMove = helpers.findArrayElementByProp(userMoves, "name", userMoveText, false);
+    const systemMove = systemMoves[helpers.randomInt(systemMoves.length)];
+
+    return { userMove, systemMove }
+}
+const doesUserMoveFirst = (user, system, userMove, systemMove) => {
+    let userFirst;
+
+    if (userMove.priority == systemMove.priority) {
+        if (user.stats.speed == system.stats.speed) {
+            userFirst = !!helpers.randomInt(2);
+        } else {
+            userFirst = user.stats.speed > system.stats.speed
+        }
+    } else {
+        userFirst = userMove.priority > systemMove.priority;
+    }
+
+    return userFirst
+}
+const calculateDamage = (attackPoke, defendPoke, move) => {
+    const attackNum = move.damageClass === "physical" ? attackPoke.stats.attack : attackPoke.stats.specialAttack;
+    const defenseNum = move.damageClass === "physical" ? defendPoke.stats.defense : defendPoke.stats.specialDefense;
+    const typeOneMod = helpers.typeMatrix(move.type, defendPoke.typeOne);
+    const typeTwoMod = !defendPoke.typeTwo ? 1 : helpers.typeMatrix(move.type, defendPoke.typeTwo);
+
+    const damageObject = {
+        baseDamage: (((attackPoke.level * 2) / 5) + 2 * move.power * (attackNum / defenseNum) / 50) + 2,
+        // 4.17% || 12.5%
+        critMod: helpers.randomInt(move.critRate == 0 ? 24 : 8) == 0 ? 1.5 : 1,
+        randomMod: helpers.randomIntRange(85, 100) / 100,
+        // Same Type Attack Bonus
+        stabMod: move.type === attackPoke.typeOne || move.type === attackPoke.typeTwo ? 1.5 : 1,
+        typeMod: typeOneMod * typeTwoMod
+    }
+
+    return {
+        totalDamage: Math.ceil(damageObject.baseDamage * damageObject.critMod * damageObject.randomMod * damageObject.stabMod * damageObject.typeMod),
+        damageObject
+    }
+}
+const executeMove = async (attackPoke, defendPoke, move) => {
+    const { totalDamage, damageObject } = calculateDamage(attackPoke, defendPoke, move);
+
+    console.log(`${attackPoke.name} used ${move.name}!`);
+    await helpers.delay(1500);
+
+    if (totalDamage == 0) {
+        console.log("The move had no effect...");
+        return true;
+    }
+
+    if (damageObject.critMod !== 1) {
+        console.log("Critical Hit!");
+        await helpers.delay(1500);
+    }
+    if (damageObject.typeMod !== 1) {
+        if (damageObject.typeMod > 1) {
+            console.log("It's super effective!");
+            await helpers.delay(1500);
+        } else {
+            console.log("It's not very effective.");
+            await helpers.delay(1500);
+        }
+    }
+
+    const remainingHealth = defendPoke.stats.hp - totalDamage
+
+    if (remainingHealth <= 0) {
+        defendPoke.stats.hp = 0;
+
+        console.log(`${defendPoke.name} has fainted!`);
+        await helpers.delay(1500);
+
+        return false;
+    }
+
+    defendPoke.stats.hp = remainingHealth;
+    move.pp--
+
+    console.log(`${defendPoke.name} took ${totalDamage} damage!`);
+    await helpers.delay(1500);
+    console.log(`${defendPoke.name} has ${remainingHealth} hp remaining.`);
+    return true;
+}
+
+// Ending Sub-Functions
+const endGame = async (userPokemon, sysPokemon) => {
+    console.clear();
+    const winner = [userPokemon, sysPokemon].filter(x => x.stats.hp !== 0)[0];
+
+    console.log(`${winner.name} has won the battle!`);
+    await helpers.delay(1500);
+    const { again } = await inquirer.prompt([
+        {
+            type: "confirm",
+            name: "again",
+            message: "Play again?",
+            choices: ["Yes", "No"]
+        }
+    ]);
+
+    if (again) {
+        init();
+    } else {
+        console.log("Goodbye!");
+        return;
+    }
 }
 
 init();

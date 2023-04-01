@@ -125,13 +125,16 @@ const filterMoveSet = (moves) => {
     return uniqueFilteredMoves
 }
 
-const removeArrayElementByProperty = (array, property, value) => {
-    array.splice(
-        array.findIndex((element) => {
-            return element[property] === value
-        }),
-        1
-    )
+const findArrayElementByProp = (array, property, value, remove) => {
+    const index = array.findIndex((element) => {
+        return element[property] === value
+    });
+
+    if (remove) {
+        return array.splice(index, 1)
+    } else {
+        return array[index]
+    }
 }
 
 const axiosGetData = async (axios, url) => {
@@ -146,6 +149,10 @@ const axiosGetData = async (axios, url) => {
 
 const randomInt = (max) => {
     return Math.floor(Math.random() * max)
+}
+
+const randomIntRange = (min, max) => {
+    return Math.floor(Math.random() * (max - min + 1) + min)
 }
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -193,9 +200,10 @@ export default {
     typeObject,
     typeMatrix,
     filterMoveSet,
-    removeArrayElementByProperty,
+    findArrayElementByProp,
     axiosGetData,
     randomInt,
+    randomIntRange,
     delay,
     colorLog,
     pascalCase
