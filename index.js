@@ -161,8 +161,6 @@ const startBattle = async (user, system) => {
     const userNameText = colorLog("User", "green", false);
     const sysNameText = colorLog("System", "red", true);
 
-    console.log(system.name);
-
     const textArray = [
         "Pokemon Battle!", 
         `${userNameText} vs. ${sysNameText}`, 
