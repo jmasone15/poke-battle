@@ -185,7 +185,11 @@ const colorLog = (text, color, isBright) => {
     return `${colorText}${text}\u001b[0m`
 }
 
-export {
+const pascalCase = (string) => {
+    return string.charAt(0).toUpperCase() + string.slice(1)
+}
+
+export default {
     typeObject,
     typeMatrix,
     filterMoveSet,
@@ -193,5 +197,6 @@ export {
     axiosGetData,
     randomInt,
     delay,
-    colorLog
+    colorLog,
+    pascalCase
 }

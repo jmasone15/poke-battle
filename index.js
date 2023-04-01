@@ -11,7 +11,8 @@
 import inquirer from "inquirer";
 import axios from "axios";
 import { Pokemon, Stats, Move } from "./classes.js";
-import { filterMoveSet, removeArrayElementByProperty, axiosGetData, randomInt, delay, colorLog } from "./helpers.js"
+// import { filterMoveSet, removeArrayElementByProperty, axiosGetData, randomInt, delay, colorLog } from "./helpers.js";
+import helpers from "./helpers.js";
 
 // Program Entry Function
 const init = async () => {
@@ -25,11 +26,12 @@ const init = async () => {
 
     // Pokemon Battle
     await startBattle(userPokemon, sysPokemon);
+    await battleMovePrompt(userPokemon.moves);
 };
 
 // Pokemon Creation Sub-Functions
 const createPokemon = async (pokemon, isSys) => {
-    const data = await axiosGetData(axios, `https://pokeapi.co/api/v2/pokemon/${pokemon}`);
+    const data = await helpers.axiosGetData(axios, `https://pokeapi.co/api/v2/pokemon/${pokemon}`);
     const moves = await selectMoves(data, isSys);
 
     return createPokeClass(data, moves);
@@ -55,7 +57,7 @@ const selectPokemon = async () => {
 }
 const selectMoves = async ({ moves }, autoSelect) => {
     let selectedMoves = [];
-    const filteredMoves = filterMoveSet(moves);
+    const filteredMoves = helpers.filterMoveSet(moves);
     let refactoredMoves = filteredMoves.map(x => { return { name: x.move.name, value: x.move.url } });
 
     // System Pokemon Moves
@@ -64,7 +66,7 @@ const selectMoves = async ({ moves }, autoSelect) => {
 
         if (refactoredMoves.length > 4) {
             for (let i = 0; i < 4; i++) {
-                const idx = randomInt(refactoredMoves.length);
+                const idx = helpers.randomInt(refactoredMoves.length);
 
                 if (!indexArray.includes(idx)) {
                     indexArray.push(idx)
@@ -110,7 +112,7 @@ const selectMoves = async ({ moves }, autoSelect) => {
 
                 const newMove = await createMoveClass(move);
                 selectedMoves.push(newMove);
-                removeArrayElementByProperty(refactoredMoves, "name", newMove.name);
+                helpers.removeArrayElementByProperty(refactoredMoves, "name", newMove.name);
             } else {
                 break;
             }
@@ -120,7 +122,7 @@ const selectMoves = async ({ moves }, autoSelect) => {
     return selectedMoves;
 }
 const createMoveClass = async (url) => {
-    const moveData = await axiosGetData(axios, url);
+    const moveData = await helpers.axiosGetData(axios, url);
     return new Move(moveData.name, moveData.type.name, moveData.power, moveData.pp, moveData.damage_class.name, moveData.accuracy);
 }
 const createPokeClass = ({ name, types, stats }, moves) => {
@@ -158,20 +160,51 @@ const createPokeClass = ({ name, types, stats }, moves) => {
 
 // Pokemon Battle Sub-Functions
 const startBattle = async (user, system) => {
-    const userNameText = colorLog("User", "green", false);
-    const sysNameText = colorLog("System", "red", true);
+    const userNameText = helpers.colorLog("User", "green", false);
+    const sysNameText = helpers.colorLog("System", "red", true);
+    const userPokeName = helpers.colorLog(helpers.pascalCase(user.name), "magenta", false);
+    const sysPokeName = helpers.colorLog(helpers.pascalCase(system.name), "magenta", false);
 
     const textArray = [
-        "Pokemon Battle!", 
-        `${userNameText} vs. ${sysNameText}`, 
-        `Go ${colorLog(user.name, "magenta", false)}!`, 
-        `${sysNameText} sends out ${colorLog(system.name, "magenta", false)}`
+        "Pokemon Battle!",
+        `${userNameText} vs. ${sysNameText}`,
+        `Go ${userPokeName}!`,
+        `${sysNameText} sends out ${sysPokeName}`
     ];
-
     for (let i = 0; i < textArray.length; i++) {
         console.log(textArray[i]);
-        await delay(1500);
+        await helpers.delay(1500);
     }
+
+
+}
+const battleMovePrompt = async (moves) => {
+    let moveArray = [];
+
+    for (let i = 0; i < moves.length; i++) {
+        moveArray.push({
+            name: `${helpers.pascalCase(moves[i].name)} [${moves[i].type}]`,
+            value: moves[i].name
+        })
+    }
+
+    const { selection } = await inquirer.prompt([
+        {
+            type: "list",
+            name: "selection",
+            message: "Select a Move",
+            choices: moveArray,
+            validate: (input) => {
+                if (!input) {
+                    return "A selection is required."
+                } else {
+                    return true
+                }
+            }
+        }
+    ]);
+
+    console.log(selection);
 }
 
 init();
