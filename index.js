@@ -1,3 +1,4 @@
+// View Pokemon info mid-battle
 // Status change moves
 // Ailments
 // Move meta data (flinch, self-stat increase, effects)
