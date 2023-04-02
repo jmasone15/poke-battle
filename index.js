@@ -1,8 +1,12 @@
 // View Pokemon info mid-battle
 // Status change moves
 // Ailments
+// How to handle special case moves?
 // Move meta data (flinch, self-stat increase, effects)
 // Weather
+
+// NOTE FOR JORDAN
+// Any functions that use loops/recursion and inquirer must have LETs for all variable declarations.
 
 import inquirer from "inquirer";
 import axios from "axios";
@@ -190,7 +194,7 @@ const battleSequence = async (userPokemon, sysPokemon) => {
 
     while (true) {
         console.clear();
-        let { userMove, systemMove } = await battleMoves(userPokemon.moves, sysPokemon.moves);
+        let { userMove, systemMove } = await battleMoves(userPokemon, sysPokemon.moves);
         let userFirst = doesUserMoveFirst(userPokemon, sysPokemon, userMove, systemMove);
 
         // First Move
@@ -220,7 +224,8 @@ const battleSequence = async (userPokemon, sysPokemon) => {
 
     return;
 }
-const battleMoves = async (userMoves, systemMoves) => {
+const battleMoves = async (userPokemon, systemMoves) => {
+    const userMoves = userPokemon.moves;
     let moveArray = [];
 
     for (let i = 0; i < userMoves.length; i++) {
@@ -232,12 +237,12 @@ const battleMoves = async (userMoves, systemMoves) => {
         }
     }
 
-    const { userMoveText } = await inquirer.prompt([
+    let { userMoveText } = await inquirer.prompt([
         {
             type: "list",
             name: "userMoveText",
             message: "Select a Move",
-            choices: moveArray,
+            choices: [...moveArray, new inquirer.Separator(), "View Pokemon Details"],
             validate: (input) => {
                 if (!input) {
                     return "A selection is required."
@@ -248,10 +253,20 @@ const battleMoves = async (userMoves, systemMoves) => {
         }
     ]);
 
-    const userMove = helpers.findArrayElementByProp(userMoves, "name", userMoveText, false);
-    const systemMove = systemMoves[helpers.randomInt(systemMoves.length)];
+    console.log(userMoveText);
 
-    return { userMove, systemMove }
+    if (userMoveText === "View Pokemon Details") {
+
+        await viewPokemonDetails(userPokemon, false);
+        return battleMoves(userPokemon, systemMoves);
+
+    } else {
+
+        let userMove = helpers.findArrayElementByProp(userMoves, "name", userMoveText, false);
+        let systemMove = systemMoves[helpers.randomInt(systemMoves.length)];
+    
+        return { userMove, systemMove }
+    }
 }
 const doesUserMoveFirst = (user, system, userMove, systemMove) => {
     let userFirst;
@@ -332,6 +347,73 @@ const executeMove = async (attackPoke, defendPoke, move) => {
     await helpers.delay(1500);
     console.log(`${defendPoke.name} has ${remainingHealth} hp remaining.`);
     return true;
+}
+const viewPokemonDetails = async (pokemon, moveData) => {
+
+    console.clear();
+
+    if (moveData) {
+
+        console.log("Move Data");
+        pokemon.moves.forEach(({ name, type, power, pp, damageClass, accuracy }) => {
+            console.log("\n");
+            console.table({
+                "Name": helpers.pascalCase(name),
+                "Type": helpers.pascalCase(type),
+                "Power": power,
+                "PP": pp,
+                "Damage Class": helpers.pascalCase(damageClass),
+                "Accuracy": accuracy
+            })
+        });
+
+    } else {
+
+        console.log("Pokemon Data");
+        console.table(
+            {
+                "Name": helpers.pascalCase(pokemon.name),
+                "Type": `${helpers.pascalCase(pokemon.typeOne)}${!pokemon.typeTwo ? "" : " | " + helpers.pascalCase(pokemon.typeTwo)}`,
+                "Level": pokemon.level,
+                "HP": pokemon.stats.hp
+            }
+        );
+        console.log("\n");
+        console.log("Pokemon Stats");
+        console.table(
+            {
+                "Attack": pokemon.stats.attack,
+                "Defense": pokemon.stats.defense,
+                "Special Attack": pokemon.stats.specialAttack,
+                "Special Defense": pokemon.stats.specialDefense,
+                "Speed": pokemon.stats.speed
+            }
+        );
+        console.log("\n");
+    }
+
+    const { selection } = await inquirer.prompt([
+        {
+            type: "list",
+            name: "selection",
+            choices: [moveData ? "View Pokemon Data" : "View Move Data", "Go Back"],
+            message: "What would you like to do?",
+            validate: (input) => {
+                if (!input) {
+                    return "A selection is required."
+                } else {
+                    return true
+                }
+            }
+        }
+    ]);
+
+    if (selection === "Go Back") {
+        console.clear();
+        return;
+    } else {
+        return viewPokemonDetails(pokemon, moveData ? false : true)
+    }
 }
 
 // Ending Sub-Functions
