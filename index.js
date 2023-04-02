@@ -1,9 +1,9 @@
-// View Pokemon info mid-battle
 // Status change moves
 // Ailments
-// How to handle special case moves?
+// Unqiue category moves
 // Move meta data (flinch, self-stat increase, effects)
 // Weather
+// Learn about AI through computer getting smarter   
 
 // NOTE FOR JORDAN
 // Any functions that use loops/recursion and inquirer must have LETs for all variable declarations.
@@ -252,8 +252,6 @@ const battleMoves = async (userPokemon, systemMoves) => {
             }
         }
     ]);
-
-    console.log(userMoveText);
 
     if (userMoveText === "View Pokemon Details") {
 
