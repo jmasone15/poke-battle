@@ -1,11 +1,13 @@
+// Move/Pokemon Descriptions
 // Status change moves
 // Ailments
 // Unqiue category moves
 // Move meta data (flinch, self-stat increase, effects)
+// Abilities
 // Weather
 // Learn about AI through computer getting smarter   
 
-// NOTE FOR JORDAN
+// NOTES FOR JORDAN
 // Any functions that use loops/recursion and inquirer must have LETs for all variable declarations.
 
 import inquirer from "inquirer";
@@ -136,9 +138,10 @@ const createMoveClass = async (url) => {
         moveData.meta.crit_rate
     );
 }
-const createPokeClass = ({ name, types, stats }, moves) => {
-    const firstType = types.filter(x => x.slot == 1)[0];
-    const secondType = types.filter(x => x.slot == 2)[0];
+const createPokeClass = async ({ name, types, stats, species }, moves) => {
+    const firstType = helpers.filterPokeType(types, 1);
+    const secondType = helpers.filterPokeType(types, 2);
+    const desc = await helpers.pokeDescription(axios, species.url);
 
     const chosenStats = new Stats();
     stats.forEach(({ base_stat, stat }) => {
@@ -166,7 +169,7 @@ const createPokeClass = ({ name, types, stats }, moves) => {
         }
     });
 
-    return new Pokemon(name, firstType.type.name, !secondType ? "" : secondType.type.name, chosenStats, moves);
+    return new Pokemon(name, desc, firstType.type.name, !secondType ? "" : secondType.type.name, chosenStats, moves);
 }
 
 // Pokemon Battle Sub-Functions

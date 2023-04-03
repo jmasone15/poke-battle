@@ -108,7 +108,6 @@ const typeMatrix = (typeOne, typeTwo) => {
         return 1
     }
 }
-
 const filterMoveSet = (moves) => {
 
     let filteredMoves = [];
@@ -125,7 +124,6 @@ const filterMoveSet = (moves) => {
 
     return uniqueFilteredMoves
 }
-
 const findArrayElementByProp = (array, property, value, remove) => {
     const index = array.findIndex((element) => {
         return element[property] === value
@@ -137,7 +135,6 @@ const findArrayElementByProp = (array, property, value, remove) => {
         return array[index]
     }
 }
-
 const axiosGetData = async (axios, url) => {
     try {
         const { data } = await axios.get(url);
@@ -147,15 +144,12 @@ const axiosGetData = async (axios, url) => {
         return {}
     }
 }
-
 const randomInt = (max) => {
     return Math.floor(Math.random() * max)
 }
-
 const randomIntRange = (min, max) => {
     return Math.floor(Math.random() * (max - min + 1) + min)
 }
-
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 const colorLog = (text, color, isBright) => {
@@ -192,9 +186,17 @@ const colorLog = (text, color, isBright) => {
 
     return `${colorText}${text}\u001b[0m`
 }
-
 const pascalCase = (string) => {
     return string.charAt(0).toUpperCase() + string.slice(1)
+}
+const filterPokeType = (types, num) => {
+    return types.filter(type => type.slot == num)[0];
+}
+const pokeDescription = async (axios, url) => { 
+    // Want to return the most recent game description
+    const speciesData = await axiosGetData(axios, url);
+    const descObject = speciesData.flavor_text_entries.filter(desc => desc.language.name === "en").pop();
+    return descObject.flavor_text.replace("\n", " ");
 }
 
 export default {
@@ -206,5 +208,7 @@ export default {
     randomIntRange,
     delay,
     colorLog,
-    pascalCase
+    pascalCase,
+    filterPokeType,
+    pokeDescription
 }
