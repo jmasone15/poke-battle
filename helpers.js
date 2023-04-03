@@ -192,11 +192,20 @@ const pascalCase = (string) => {
 const filterPokeType = (types, num) => {
     return types.filter(type => type.slot == num)[0];
 }
-const pokeDescription = async (axios, url) => { 
+const findDescription = async (axios, url, flavorArray) => {
+
+    let descObject;
+
+    if (!url) {
+        descObject = flavorArray
+    } else {
+        const { flavor_text_entries } = await axiosGetData(axios, url);
+        descObject = flavor_text_entries
+    }
+    
     // Want to return the most recent game description
-    const speciesData = await axiosGetData(axios, url);
-    const descObject = speciesData.flavor_text_entries.filter(desc => desc.language.name === "en").pop();
-    return descObject.flavor_text.replace("\n", " ");
+    const filteredDesc = descObject.filter(desc => desc.language.name === "en").pop();
+    return filteredDesc.flavor_text.replace("\n", " ");
 }
 
 export default {
@@ -210,5 +219,5 @@ export default {
     colorLog,
     pascalCase,
     filterPokeType,
-    pokeDescription
+    findDescription
 }

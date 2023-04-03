@@ -1,7 +1,7 @@
 class Pokemon {
     constructor(name, description, typeOne, typeTwo, stats, moves) {
         this.name = name;
-        this.description= description;
+        this.description = description;
         this.typeOne = typeOne;
         // Optional
         this.typeTwo = typeTwo;
@@ -24,8 +24,9 @@ class Stats {
 }
 
 class Move {
-    constructor(name, type, power, pp, damageClass, accuracy, priority, critRate) {
+    constructor(name, description, type, power, pp, damageClass, accuracy, priority, critRate) {
         this.name = name;
+        this.description = description;
         this.type = type;
         this.power = power;
         this.pp = pp;

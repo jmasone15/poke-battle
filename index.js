@@ -127,8 +127,11 @@ const selectMoves = async ({ moves }, autoSelect) => {
 }
 const createMoveClass = async (url) => {
     const moveData = await helpers.axiosGetData(axios, url);
+    const moveDesc = await helpers.findDescription("", "", moveData.flavor_text_entries);
+
     return new Move(
         moveData.name,
+        moveDesc,
         moveData.type.name,
         moveData.power,
         moveData.pp,
@@ -141,7 +144,7 @@ const createMoveClass = async (url) => {
 const createPokeClass = async ({ name, types, stats, species }, moves) => {
     const firstType = helpers.filterPokeType(types, 1);
     const secondType = helpers.filterPokeType(types, 2);
-    const desc = await helpers.pokeDescription(axios, species.url);
+    const desc = await helpers.findDescription(axios, species.url);
 
     const chosenStats = new Stats();
     stats.forEach(({ base_stat, stat }) => {
