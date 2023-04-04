@@ -14,26 +14,43 @@ class Pokemon {
 
 class Stats {
     constructor(attack, defense, specialAttack, specialDefense, speed, hp) {
-        this.attack = attack;
-        this.defense = defense;
-        this.specialAttack = specialAttack;
-        this.specialDefense = specialDefense;
-        this.speed = speed;
+        this.attack = new Stat(attack);
+        this.defense = new Stat(defense);
+        this.specialAttack = new Stat(specialAttack);
+        this.specialDefense = new Stat(specialDefense);
+        this.speed = new Stat(speed);
         this.hp = hp;
     }
 }
 
+class Stat {
+    constructor(value) {
+        this.value = value;
+        this.stage = 1;
+    }
+}
+
 class Move {
-    constructor(name, description, type, power, pp, damageClass, accuracy, priority, critRate) {
+    constructor(name, description, type, power, pp, damageClass, statChanges, accuracy, priority, critRate, category) {
         this.name = name;
         this.description = description;
         this.type = type;
         this.power = power;
         this.pp = pp;
         this.damageClass = damageClass;
+        this.statChanges = statChanges;
         this.accuracy = accuracy;
         this.priority = priority;
         this.critRate = critRate;
+        this.category = category;
+    }
+}
+
+class StatChange {
+    constructor(change, stat) {
+        this.change = change;
+        this.stat = stat;
+        this.target = change > 0 ? "user" : "enemy"
     }
 }
 
@@ -41,4 +58,5 @@ export {
     Pokemon,
     Stats,
     Move,
+    StatChange
 }

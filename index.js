@@ -1,10 +1,10 @@
-// Move/Pokemon Descriptions
 // Status change moves
 // Ailments
 // Unqiue category moves
 // Move meta data (flinch, self-stat increase, effects)
 // Abilities
 // Weather
+// Organize functions/files
 // Learn about AI through computer getting smarter   
 
 // NOTES FOR JORDAN
@@ -12,7 +12,7 @@
 
 import inquirer from "inquirer";
 import axios from "axios";
-import { Pokemon, Stats, Move } from "./classes.js";
+import { Pokemon, Stats, Move, StatChange } from "./classes.js";
 import helpers from "./helpers.js";
 
 // Program Entry Function
@@ -129,6 +129,9 @@ const createMoveClass = async (url) => {
     const moveData = await helpers.axiosGetData(axios, url);
     const moveDesc = await helpers.findDescription("", "", moveData.flavor_text_entries);
 
+    let statChangeArray = [];
+    moveData.stat_changes.forEach(change => statChangeArray.push(new StatChange(change.change, change.stat.name)));
+
     return new Move(
         moveData.name,
         moveDesc,
@@ -136,9 +139,11 @@ const createMoveClass = async (url) => {
         moveData.power,
         moveData.pp,
         moveData.damage_class.name,
+        statChangeArray,
         moveData.accuracy,
         moveData.priority,
-        moveData.meta.crit_rate
+        moveData.meta.crit_rate,
+        moveData.meta.category.name
     );
 }
 const createPokeClass = async ({ name, types, stats, species }, moves) => {
@@ -268,7 +273,7 @@ const battleMoves = async (userPokemon, systemMoves) => {
 
         let userMove = helpers.findArrayElementByProp(userMoves, "name", userMoveText, false);
         let systemMove = systemMoves[helpers.randomInt(systemMoves.length)];
-    
+
         return { userMove, systemMove }
     }
 }
@@ -276,10 +281,10 @@ const doesUserMoveFirst = (user, system, userMove, systemMove) => {
     let userFirst;
 
     if (userMove.priority == systemMove.priority) {
-        if (user.stats.speed == system.stats.speed) {
+        if (user.stats.speed.value == system.stats.speed.value) {
             userFirst = !!helpers.randomInt(2);
         } else {
-            userFirst = user.stats.speed > system.stats.speed
+            userFirst = user.stats.speed.value > system.stats.speed.value
         }
     } else {
         userFirst = userMove.priority > systemMove.priority;
@@ -288,8 +293,8 @@ const doesUserMoveFirst = (user, system, userMove, systemMove) => {
     return userFirst
 }
 const calculateDamage = (attackPoke, defendPoke, move) => {
-    const attackNum = move.damageClass === "physical" ? attackPoke.stats.attack : attackPoke.stats.specialAttack;
-    const defenseNum = move.damageClass === "physical" ? defendPoke.stats.defense : defendPoke.stats.specialDefense;
+    const attackNum = move.damageClass === "physical" ? attackPoke.stats.attack.value : attackPoke.stats.specialAttack.value;
+    const defenseNum = move.damageClass === "physical" ? defendPoke.stats.defense.value : defendPoke.stats.specialDefense.value;
     const typeOneMod = helpers.typeMatrix(move.type, defendPoke.typeOne);
     const typeTwoMod = !defendPoke.typeTwo ? 1 : helpers.typeMatrix(move.type, defendPoke.typeTwo);
 
@@ -308,48 +313,112 @@ const calculateDamage = (attackPoke, defendPoke, move) => {
         damageObject
     }
 }
-const executeMove = async (attackPoke, defendPoke, move) => {
-    const { totalDamage, damageObject } = calculateDamage(attackPoke, defendPoke, move);
+const updateStatChange = (attackPoke, defendPoke, { target, stat, change }) => {
+    const targetPokemon = target === "user" ? attackPoke : defendPoke;
+    let targetStat;
 
-    console.log(`${attackPoke.name} used ${move.name}!`);
-    await helpers.delay(1500);
-
-    if (totalDamage == 0) {
-        console.log("The move had no effect...");
-        return true;
-    }
-
-    if (damageObject.critMod !== 1) {
-        console.log("Critical Hit!");
-        await helpers.delay(1500);
-    }
-    if (damageObject.typeMod !== 1) {
-        if (damageObject.typeMod > 1) {
-            console.log("It's super effective!");
-            await helpers.delay(1500);
+    if (stat === "special-attack" || stat === "special-defense") {
+        if (stat === "special-attack") {
+            targetStat = targetPokemon.stat.specialAttack;
         } else {
-            console.log("It's not very effective.");
-            await helpers.delay(1500);
+            targetStat = targetPokemon.stat.specialDefense;
+        }
+    } else {
+        targetStat = targetPokemon.stats[stat]
+    }
+
+    if (targetStat.stage == 6 || targetStat.stage == -6) {
+        console.log(`${targetPokemon.name}'s ${stat} won't go any ${change < 0 ? "lower" : "higher"}!`);
+    } else {
+        targetStat.stage = targetStat.change + change;
+        let message;
+
+        if (target === "user") {
+            switch (change) {
+                case 1:
+                    message = "rose!"
+                    break;
+                case 2:
+                    message = "rose sharply!"
+                    break;
+                case 3:
+                    message = "rose drastically!"
+                    break;
+                default:
+                    break;
+            }
+        } else {
+            switch (change) {
+                case 1:
+                    message = "fell!"
+                    break;
+                case 2:
+                    message = "harshly fell!"
+                    break;
+                case 3:
+                    message = "severely fell!"
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        console.log(`${targetPokemon.name}'s ${stat} ${message}`);
+    }
+}
+const executeMove = async (attackPoke, defendPoke, move) => {
+
+    if (move.statChanges.length !== 0) {
+        for (let i = 0; i < move.statChanges.length; i++) {
+            updateStatChange(attackPoke, defendPoke, move.statChanges[i]);
+            await delay(1500);
         }
     }
 
-    const remainingHealth = defendPoke.stats.hp - totalDamage
+    if (move.damageClass !== "status") {
+        const { totalDamage, damageObject } = calculateDamage(attackPoke, defendPoke, move);
 
-    if (remainingHealth <= 0) {
-        defendPoke.stats.hp = 0;
-
-        console.log(`${defendPoke.name} has fainted!`);
+        console.log(`${attackPoke.name} used ${move.name}!`);
         await helpers.delay(1500);
 
-        return false;
+        if (totalDamage == 0) {
+            console.log("The move had no effect...");
+            return true;
+        }
+
+        if (damageObject.critMod !== 1) {
+            console.log("Critical Hit!");
+            await helpers.delay(1500);
+        }
+        if (damageObject.typeMod !== 1) {
+            if (damageObject.typeMod > 1) {
+                console.log("It's super effective!");
+                await helpers.delay(1500);
+            } else {
+                console.log("It's not very effective.");
+                await helpers.delay(1500);
+            }
+        }
+
+        const remainingHealth = defendPoke.stats.hp - totalDamage
+
+        if (remainingHealth <= 0) {
+            defendPoke.stats.hp = 0;
+
+            console.log(`${defendPoke.name} has fainted!`);
+            await helpers.delay(1500);
+
+            return false;
+        }
+
+        defendPoke.stats.hp = remainingHealth;
+        move.pp--
+
+        console.log(`${defendPoke.name} took ${totalDamage} damage!`);
+        await helpers.delay(1500);
+        console.log(`${defendPoke.name} has ${remainingHealth} hp remaining.`);
     }
 
-    defendPoke.stats.hp = remainingHealth;
-    move.pp--
-
-    console.log(`${defendPoke.name} took ${totalDamage} damage!`);
-    await helpers.delay(1500);
-    console.log(`${defendPoke.name} has ${remainingHealth} hp remaining.`);
     return true;
 }
 const viewPokemonDetails = async (pokemon, moveData) => {
@@ -386,11 +455,11 @@ const viewPokemonDetails = async (pokemon, moveData) => {
         console.log("Pokemon Stats");
         console.table(
             {
-                "Attack": pokemon.stats.attack,
-                "Defense": pokemon.stats.defense,
-                "Special Attack": pokemon.stats.specialAttack,
-                "Special Defense": pokemon.stats.specialDefense,
-                "Speed": pokemon.stats.speed
+                "Attack": pokemon.stats.attack.value,
+                "Defense": pokemon.stats.defense.value,
+                "Special Attack": pokemon.stats.specialAttack.value,
+                "Special Defense": pokemon.stats.specialDefense.value,
+                "Speed": pokemon.stats.speed.value
             }
         );
         console.log("\n");
