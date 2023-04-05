@@ -12,7 +12,7 @@
 
 import inquirer from "inquirer";
 import axios from "axios";
-import { Pokemon, Stats, Move, StatChange } from "./classes.js";
+import { Pokemon, Stats, Move, Stat, StatChange } from "./classes.js";
 import helpers from "./helpers.js";
 
 // Program Entry Function
@@ -158,19 +158,19 @@ const createPokeClass = async ({ name, types, stats, species }, moves) => {
                 chosenStats.hp = base_stat;
                 break;
             case "attack":
-                chosenStats.attack = base_stat;
+                chosenStats.attack = new Stat(base_stat);
                 break;
             case "defense":
-                chosenStats.defense = base_stat;
+                chosenStats.defense = new Stat(base_stat);
                 break;
             case "special-attack":
-                chosenStats.specialAttack = base_stat;
+                chosenStats.specialAttack = new Stat(base_stat);
                 break;
             case "special-defense":
-                chosenStats.specialDefense = base_stat;
+                chosenStats.specialDefense = new Stat(base_stat);
                 break;
             case "speed":
-                chosenStats.speed = base_stat;
+                chosenStats.speed = new Stat(base_stat);
                 break;
             default:
                 break;
@@ -204,7 +204,7 @@ const battleSequence = async (userPokemon, sysPokemon) => {
     }
 
     while (true) {
-        console.clear();
+        // console.clear();
         let { userMove, systemMove } = await battleMoves(userPokemon, sysPokemon.moves);
         let userFirst = doesUserMoveFirst(userPokemon, sysPokemon, userMove, systemMove);
 
@@ -292,11 +292,49 @@ const doesUserMoveFirst = (user, system, userMove, systemMove) => {
 
     return userFirst
 }
+const determineStatStage = ({ value, stage }) => {
+    switch (stage) {
+        case -6:
+            return value * (2 / 8)
+        case -5:
+            return value * (2 / 7)
+        case -4:
+            return value * (2 / 6)
+        case -3:
+            return value * (2 / 5)
+        case -2:
+            return value * (2 / 4)
+        case -1:
+            return value * (2 / 3)
+        case 1:
+            return value * (3 / 2)
+        case 2:
+            return value * (4 / 2)
+        case 3:
+            return value * (5 / 2)
+        case 4:
+            return value * (6 / 2)
+        case 5:
+            return value * (7 / 2)
+        case 6:
+            return value * (8 / 2)
+        default:
+            return value
+    }
+}
+const calculateStatDamage = (attackPoke, defendPoke, move) => {
+    const isPhysical = move.damageClass === "physical";
+    const attackStat = isPhysical ? attackPoke.stats.attack : attackPoke.stats.specialAttack;
+    const defenseStat = isPhysical ? defendPoke.stats.defense : defendPoke.stats.specialDefense;
+
+    return { attackNum: determineStatStage(attackStat), defenseNum: determineStatStage(defenseStat) }
+}
 const calculateDamage = (attackPoke, defendPoke, move) => {
-    const attackNum = move.damageClass === "physical" ? attackPoke.stats.attack.value : attackPoke.stats.specialAttack.value;
-    const defenseNum = move.damageClass === "physical" ? defendPoke.stats.defense.value : defendPoke.stats.specialDefense.value;
+    const { attackNum, defenseNum } = calculateStatDamage(attackPoke, defendPoke, move);
     const typeOneMod = helpers.typeMatrix(move.type, defendPoke.typeOne);
     const typeTwoMod = !defendPoke.typeTwo ? 1 : helpers.typeMatrix(move.type, defendPoke.typeTwo);
+
+    console.log(attackNum, defenseNum);
 
     const damageObject = {
         baseDamage: (((attackPoke.level * 2) / 5) + 2 * move.power * (attackNum / defenseNum) / 50) + 2,
@@ -318,19 +356,17 @@ const updateStatChange = (attackPoke, defendPoke, { target, stat, change }) => {
     let targetStat;
 
     if (stat === "special-attack" || stat === "special-defense") {
-        if (stat === "special-attack") {
-            targetStat = targetPokemon.stat.specialAttack;
-        } else {
-            targetStat = targetPokemon.stat.specialDefense;
-        }
+        targetStat = targetPokemon.stat[stat === "special-attack" ? "specialAttack" : "specialDefense"]
     } else {
         targetStat = targetPokemon.stats[stat]
     }
 
+    console.log({ target, stat, change });
+
     if (targetStat.stage == 6 || targetStat.stage == -6) {
         console.log(`${targetPokemon.name}'s ${stat} won't go any ${change < 0 ? "lower" : "higher"}!`);
     } else {
-        targetStat.stage = targetStat.change + change;
+        targetStat.stage = targetStat.stage + change;
         let message;
 
         if (target === "user") {
@@ -341,24 +377,20 @@ const updateStatChange = (attackPoke, defendPoke, { target, stat, change }) => {
                 case 2:
                     message = "rose sharply!"
                     break;
-                case 3:
-                    message = "rose drastically!"
-                    break;
                 default:
+                    message = "rose drastically!"
                     break;
             }
         } else {
             switch (change) {
-                case 1:
+                case -1:
                     message = "fell!"
                     break;
-                case 2:
+                case -2:
                     message = "harshly fell!"
                     break;
-                case 3:
-                    message = "severely fell!"
-                    break;
                 default:
+                    message = "severely fell!"
                     break;
             }
         }
@@ -368,17 +400,11 @@ const updateStatChange = (attackPoke, defendPoke, { target, stat, change }) => {
 }
 const executeMove = async (attackPoke, defendPoke, move) => {
 
-    if (move.statChanges.length !== 0) {
-        for (let i = 0; i < move.statChanges.length; i++) {
-            updateStatChange(attackPoke, defendPoke, move.statChanges[i]);
-            await delay(1500);
-        }
-    }
+    console.log(`${attackPoke.name} used ${move.name}!`);
 
     if (move.damageClass !== "status") {
         const { totalDamage, damageObject } = calculateDamage(attackPoke, defendPoke, move);
 
-        console.log(`${attackPoke.name} used ${move.name}!`);
         await helpers.delay(1500);
 
         if (totalDamage == 0) {
@@ -418,6 +444,15 @@ const executeMove = async (attackPoke, defendPoke, move) => {
         await helpers.delay(1500);
         console.log(`${defendPoke.name} has ${remainingHealth} hp remaining.`);
     }
+
+    if (move.statChanges.length !== 0) {
+        for (let i = 0; i < move.statChanges.length; i++) {
+            updateStatChange(attackPoke, defendPoke, move.statChanges[i]);
+            await helpers.delay(1500);
+        }
+    }
+
+    console.log(defendPoke.stats);
 
     return true;
 }

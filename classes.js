@@ -26,7 +26,7 @@ class Stats {
 class Stat {
     constructor(value) {
         this.value = value;
-        this.stage = 1;
+        this.stage = 0;
     }
 }
 
@@ -57,6 +57,7 @@ class StatChange {
 export {
     Pokemon,
     Stats,
+    Stat,
     Move,
     StatChange
 }
