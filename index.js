@@ -1,4 +1,6 @@
 // Status change moves
+// Accuracy
+// Evasion
 // Ailments
 // Unqiue category moves
 // Move meta data (flinch, self-stat increase, effects)
@@ -334,8 +336,6 @@ const calculateDamage = (attackPoke, defendPoke, move) => {
     const typeOneMod = helpers.typeMatrix(move.type, defendPoke.typeOne);
     const typeTwoMod = !defendPoke.typeTwo ? 1 : helpers.typeMatrix(move.type, defendPoke.typeTwo);
 
-    console.log(attackNum, defenseNum);
-
     const damageObject = {
         baseDamage: (((attackPoke.level * 2) / 5) + 2 * move.power * (attackNum / defenseNum) / 50) + 2,
         // 4.17% || 12.5%
@@ -360,8 +360,6 @@ const updateStatChange = (attackPoke, defendPoke, { target, stat, change }) => {
     } else {
         targetStat = targetPokemon.stats[stat]
     }
-
-    console.log({ target, stat, change });
 
     if (targetStat.stage == 6 || targetStat.stage == -6) {
         console.log(`${targetPokemon.name}'s ${stat} won't go any ${change < 0 ? "lower" : "higher"}!`);
@@ -401,6 +399,7 @@ const updateStatChange = (attackPoke, defendPoke, { target, stat, change }) => {
 const executeMove = async (attackPoke, defendPoke, move) => {
 
     console.log(`${attackPoke.name} used ${move.name}!`);
+    move.pp--
 
     if (move.damageClass !== "status") {
         const { totalDamage, damageObject } = calculateDamage(attackPoke, defendPoke, move);
@@ -438,7 +437,6 @@ const executeMove = async (attackPoke, defendPoke, move) => {
         }
 
         defendPoke.stats.hp = remainingHealth;
-        move.pp--
 
         console.log(`${defendPoke.name} took ${totalDamage} damage!`);
         await helpers.delay(1500);
@@ -451,8 +449,6 @@ const executeMove = async (attackPoke, defendPoke, move) => {
             await helpers.delay(1500);
         }
     }
-
-    console.log(defendPoke.stats);
 
     return true;
 }
