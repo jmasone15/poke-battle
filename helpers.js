@@ -207,6 +207,37 @@ const findDescription = async (axios, url, flavorArray) => {
     const filteredDesc = descObject.filter(desc => desc.language.name === "en").pop();
     return filteredDesc.flavor_text.replace("\n", " ");
 }
+const determineNature = () => {
+    const natureArray = [
+        "Hardy",
+        "Lonely",
+        "Brave",
+        "Adamant",
+        "Naughty",
+        "Bold",
+        "Docile",
+        "Relaxed",
+        "Impish",
+        "Lax",
+        "Timid",
+        "Hasty",
+        "Serious",
+        "Jolly",
+        "Naive",
+        "Modest",
+        "Mild",
+        "Quiet",
+        "Bashful",
+        "Rash",
+        "Calm",
+        "Gentle",
+        "Sassy",
+        "Careful",
+        "Quirky"
+    ];
+
+    return natureArray[randomInt(25)];
+}
 
 export default {
     typeMatrix,
@@ -219,5 +250,6 @@ export default {
     colorLog,
     pascalCase,
     filterPokeType,
-    findDescription
+    findDescription,
+    determineNature
 }

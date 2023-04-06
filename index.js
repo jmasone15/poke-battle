@@ -14,7 +14,7 @@
 
 import inquirer from "inquirer";
 import axios from "axios";
-import { Pokemon, Stats, Move, Stat, StatChange } from "./classes.js";
+import { Pokemon, Stats, Move, Stat, StatChange, Nature } from "./classes.js";
 import helpers from "./helpers.js";
 
 // Program Entry Function
@@ -179,7 +179,15 @@ const createPokeClass = async ({ name, types, stats, species }, moves) => {
         }
     });
 
-    return new Pokemon(name, desc, firstType.type.name, !secondType ? "" : secondType.type.name, chosenStats, moves);
+    return new Pokemon(
+        name, 
+        desc, 
+        firstType.type.name, 
+        !secondType ? "" : secondType.type.name,
+        new Nature(helpers.determineNature()),
+        chosenStats, 
+        moves
+    );
 }
 
 // Pokemon Battle Sub-Functions

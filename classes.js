@@ -1,5 +1,5 @@
 class Pokemon {
-    constructor(name, description, typeOne, typeTwo, stats, moves) {
+    constructor(name, description, typeOne, typeTwo, nature, stats, moves) {
         this.name = name;
         this.description = description;
         this.typeOne = typeOne;
@@ -7,6 +7,7 @@ class Pokemon {
         this.typeTwo = typeTwo;
         // Eventually will be 50 | 5 for initial setup
         this.level = 5;
+        this.nature = nature;
         this.stats = stats;
         this.moves = moves;
     }
@@ -54,10 +55,49 @@ class StatChange {
     }
 }
 
+class Nature {
+    constructor(name) {
+        this.name = name;
+    }
+
+    changedStat(increase) {
+        if (increase) {
+            if (["Lonely", "Brave", "Adamant", "Naughty"].includes(this.name)) {
+                return "attack"
+            } else if (["Bold", "Relaxed", "Impish", "Lax"].includes(this.name)) {
+                return "defense"
+            } else if (["Timid", "Hasty", "Jolly", "Naive"].includes(this.name)) {
+                return "speed"
+            } else if (["Modest", "Mild", "Quiet", "Rash"].includes(this.name)) {
+                return "specialAttack"
+            } else if (["Calm", "Gentle", "Sassy", "Careful"].includes(this.name)) {
+                return "specialDefense"
+            } else {
+                return ""
+            }
+        } else {
+            if (["Bold", "Timid", "Modest", "Calm"].includes(this.name)) {
+                return "attack"
+            } else if (["Lonely", "Hasty", "Mild", "Gentle"].includes(this.name)) {
+                return "defense"
+            } else if (["Brave", "Relaxed", "Quiet", "Sassy"].includes(this.name)) {
+                return "speed"
+            } else if (["Adamant", "Impish", "Jolly", "Careful"].includes(this.name)) {
+                return "specialAttack"
+            } else if (["Naughty", "Lax", "Naive", "Rash"].includes(this.name)) {
+                return "specialDefense"
+            } else {
+                return ""
+            }
+        }
+    }
+}
+
 export {
     Pokemon,
     Stats,
     Stat,
     Move,
-    StatChange
+    StatChange,
+    Nature
 }
