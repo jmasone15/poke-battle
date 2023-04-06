@@ -1,7 +1,7 @@
-// Status change moves
 // Accuracy
 // Evasion
 // Ailments
+// Nature
 // Unqiue category moves
 // Move meta data (flinch, self-stat increase, effects)
 // Abilities
@@ -206,7 +206,7 @@ const battleSequence = async (userPokemon, sysPokemon) => {
     }
 
     while (true) {
-        // console.clear();
+        console.clear();
         let { userMove, systemMove } = await battleMoves(userPokemon, sysPokemon.moves);
         let userFirst = doesUserMoveFirst(userPokemon, sysPokemon, userMove, systemMove);
 
