@@ -1,12 +1,12 @@
 class Pokemon {
-    constructor(name, description, typeOne, typeTwo, nature, stats, moves) {
+    constructor(name, description, typeOne, typeTwo, level, nature, stats, moves) {
         this.name = name;
         this.description = description;
         this.typeOne = typeOne;
         // Optional
         this.typeTwo = typeTwo;
         // Eventually will be 50 | 5 for initial setup
-        this.level = 5;
+        this.level = level;
         this.nature = nature;
         this.stats = stats;
         this.moves = moves;
@@ -15,19 +15,23 @@ class Pokemon {
 
 class Stats {
     constructor(attack, defense, specialAttack, specialDefense, speed, hp) {
-        this.attack = new Stat(attack);
-        this.defense = new Stat(defense);
-        this.specialAttack = new Stat(specialAttack);
-        this.specialDefense = new Stat(specialDefense);
-        this.speed = new Stat(speed);
+        this.attack = attack;
+        this.defense = defense;
+        this.specialAttack = specialAttack;
+        this.specialDefense = specialDefense;
+        this.speed = speed;
         this.hp = hp;
     }
 }
 
 class Stat {
-    constructor(value) {
-        this.value = value;
-        this.stage = 0;
+    constructor(base, value, iv, effort) {
+        this.base = base,
+        this.value = value,
+        this.stage = 0,
+        this.iv = iv,
+        this.effort = effort,
+        this.starting = value
     }
 }
 

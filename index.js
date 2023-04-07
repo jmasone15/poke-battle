@@ -2,10 +2,12 @@
 // Evasion
 // Ailments
 // Nature
+// Effects
 // Unqiue category moves
 // Move meta data (flinch, self-stat increase, effects)
 // Abilities
 // Weather
+// Teams
 // Organize functions/files
 // Learn about AI through computer getting smarter   
 
@@ -127,6 +129,27 @@ const selectMoves = async ({ moves }, autoSelect) => {
 
     return selectedMoves;
 }
+const createStatClass = ({ base_stat, effort, stat }, level, nature) => {
+    const iv = helpers.randomInt(32);
+    const statCalculation = ((2 * base_stat + iv + (effort / 4)) * level);
+    const natureStats = { increase: nature.changedStat(true), decrease: nature.changedStat(false) };
+    let statValue;
+
+    if (stat.name === "hp") {
+        statValue = (statCalculation / 100) + level + 10;
+    } else {
+        const value = (statCalculation / 100) + 5;
+        if (stat.name === natureStats.increase) {
+            statValue = value * 1.1
+        } else if (stat.name === natureStats.decrease) {
+            statValue = value * 0.9
+        } else {
+            statValue = value
+        }
+    }
+
+    return new Stat(base_stat, Math.floor(statValue), iv, effort)
+}
 const createMoveClass = async (url) => {
     const moveData = await helpers.axiosGetData(axios, url);
     const moveDesc = await helpers.findDescription("", "", moveData.flavor_text_entries);
@@ -152,31 +175,24 @@ const createPokeClass = async ({ name, types, stats, species }, moves) => {
     const firstType = helpers.filterPokeType(types, 1);
     const secondType = helpers.filterPokeType(types, 2);
     const desc = await helpers.findDescription(axios, species.url);
+    const nature = new Nature(helpers.determineNature());
+    const level = 5;
 
     const chosenStats = new Stats();
-    stats.forEach(({ base_stat, stat }) => {
-        switch (stat.name) {
-            case "hp":
-                chosenStats.hp = base_stat;
-                break;
-            case "attack":
-                chosenStats.attack = new Stat(base_stat);
-                break;
-            case "defense":
-                chosenStats.defense = new Stat(base_stat);
-                break;
-            case "special-attack":
-                chosenStats.specialAttack = new Stat(base_stat);
-                break;
-            case "special-defense":
-                chosenStats.specialDefense = new Stat(base_stat);
-                break;
-            case "speed":
-                chosenStats.speed = new Stat(base_stat);
-                break;
-            default:
-                break;
+    stats.forEach((stat) => {
+
+        let statName = stat.stat.name;
+        const statClass = createStatClass(stat, level, nature);
+
+        if (statName.startsWith("special")) {
+            if (statName === "special-attack") {
+                statName = "specialAttack"
+            } else {
+                statName = "specialDefense"
+            }
         }
+
+        chosenStats[statName] = statClass;
     });
 
     return new Pokemon(
@@ -184,7 +200,8 @@ const createPokeClass = async ({ name, types, stats, species }, moves) => {
         desc, 
         firstType.type.name, 
         !secondType ? "" : secondType.type.name,
-        new Nature(helpers.determineNature()),
+        level,
+        nature,
         chosenStats, 
         moves
     );
@@ -408,11 +425,10 @@ const executeMove = async (attackPoke, defendPoke, move) => {
 
     console.log(`${attackPoke.name} used ${move.name}!`);
     move.pp--
+    await helpers.delay(1500);
 
     if (move.damageClass !== "status") {
         const { totalDamage, damageObject } = calculateDamage(attackPoke, defendPoke, move);
-
-        await helpers.delay(1500);
 
         if (totalDamage == 0) {
             console.log("The move had no effect...");
@@ -433,10 +449,10 @@ const executeMove = async (attackPoke, defendPoke, move) => {
             }
         }
 
-        const remainingHealth = defendPoke.stats.hp - totalDamage
+        const remainingHealth = defendPoke.stats.hp.value - totalDamage
 
         if (remainingHealth <= 0) {
-            defendPoke.stats.hp = 0;
+            defendPoke.stats.hp.value = 0;
 
             console.log(`${defendPoke.name} has fainted!`);
             await helpers.delay(1500);
@@ -444,7 +460,7 @@ const executeMove = async (attackPoke, defendPoke, move) => {
             return false;
         }
 
-        defendPoke.stats.hp = remainingHealth;
+        defendPoke.stats.hp.value = remainingHealth;
 
         console.log(`${defendPoke.name} took ${totalDamage} damage!`);
         await helpers.delay(1500);
@@ -487,18 +503,18 @@ const viewPokemonDetails = async (pokemon, moveData) => {
                 "Name": helpers.pascalCase(pokemon.name),
                 "Type": `${helpers.pascalCase(pokemon.typeOne)}${!pokemon.typeTwo ? "" : " | " + helpers.pascalCase(pokemon.typeTwo)}`,
                 "Level": pokemon.level,
-                "HP": pokemon.stats.hp
+                "HP": `${pokemon.stats.hp.value}/${pokemon.stats.hp.starting}`
             }
         );
         console.log("\n");
         console.log("Pokemon Stats");
         console.table(
             {
-                "Attack": pokemon.stats.attack.value,
-                "Defense": pokemon.stats.defense.value,
-                "Special Attack": pokemon.stats.specialAttack.value,
-                "Special Defense": pokemon.stats.specialDefense.value,
-                "Speed": pokemon.stats.speed.value
+                "Attack": determineStatStage(pokemon.stats.attack),
+                "Defense": determineStatStage(pokemon.stats.defense),
+                "Special Attack": determineStatStage(pokemon.stats.specialAttack),
+                "Special Defense": determineStatStage(pokemon.stats.specialDefense),
+                "Speed": determineStatStage(pokemon.stats.speed)
             }
         );
         console.log("\n");
@@ -531,7 +547,7 @@ const viewPokemonDetails = async (pokemon, moveData) => {
 // Ending Sub-Functions
 const endGame = async (userPokemon, sysPokemon) => {
     console.clear();
-    const winner = [userPokemon, sysPokemon].filter(x => x.stats.hp !== 0)[0];
+    const winner = [userPokemon, sysPokemon].filter(x => x.stats.hp.value !== 0)[0];
 
     console.log(`${winner.name} has won the battle!`);
     await helpers.delay(1500);

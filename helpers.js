@@ -151,7 +151,6 @@ const randomIntRange = (min, max) => {
     return Math.floor(Math.random() * (max - min + 1) + min)
 }
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
 const colorLog = (text, color, isBright) => {
     let colorText;
 
