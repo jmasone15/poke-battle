@@ -21,16 +21,18 @@ class Stats {
         this.specialDefense = specialDefense;
         this.speed = speed;
         this.hp = hp;
+        this.accuracy = { stage: 0 };
+        this.evasion = { stage: 0 };
     }
 }
 
 class Stat {
     constructor(base, value, iv, effort) {
-        this.base = base,
-        this.value = value,
-        this.stage = 0,
-        this.iv = iv,
-        this.effort = effort,
+        this.base = base;
+        this.value = value;
+        this.stage = 0;
+        this.iv = iv;
+        this.effort = effort;
         this.starting = value
     }
 }

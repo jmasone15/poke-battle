@@ -1,15 +1,11 @@
-// Accuracy
-// Evasion
 // Ailments
-// Nature
-// Effects
 // Unqiue category moves
 // Move meta data (flinch, self-stat increase, effects)
 // Abilities
 // Weather
 // Teams
 // Organize functions/files
-// Learn about AI through computer getting smarter   
+// Learn about AI through computer getting smarter
 
 // NOTES FOR JORDAN
 // Any functions that use loops/recursion and inquirer must have LETs for all variable declarations.
@@ -196,13 +192,13 @@ const createPokeClass = async ({ name, types, stats, species }, moves) => {
     });
 
     return new Pokemon(
-        name, 
-        desc, 
-        firstType.type.name, 
+        name,
+        desc,
+        firstType.type.name,
         !secondType ? "" : secondType.type.name,
         level,
         nature,
-        chosenStats, 
+        chosenStats,
         moves
     );
 }
@@ -232,6 +228,9 @@ const battleSequence = async (userPokemon, sysPokemon) => {
 
     while (true) {
         console.clear();
+
+        console.log(userPokemon.stats, sysPokemon.stats);
+
         let { userMove, systemMove } = await battleMoves(userPokemon, sysPokemon.moves);
         let userFirst = doesUserMoveFirst(userPokemon, sysPokemon, userMove, systemMove);
 
@@ -378,20 +377,21 @@ const calculateDamage = (attackPoke, defendPoke, move) => {
 }
 const updateStatChange = (attackPoke, defendPoke, { target, stat, change }) => {
     const targetPokemon = target === "user" ? attackPoke : defendPoke;
-    let targetStat;
+    const convertedStat = stat === "special-attack" || stat === "special-defense" ? stat === "special-attack" ? "specialAttack" : "specialDefense" : stat;
+    const targetStat = targetPokemon.stats[convertedStat];
 
-    if (stat === "special-attack" || stat === "special-defense") {
-        targetStat = targetPokemon.stat[stat === "special-attack" ? "specialAttack" : "specialDefense"]
-    } else {
-        targetStat = targetPokemon.stats[stat]
-    }
+    console.log(targetPokemon.name, convertedStat, targetStat);
 
     if (targetStat.stage == 6 || targetStat.stage == -6) {
         console.log(`${targetPokemon.name}'s ${stat} won't go any ${change < 0 ? "lower" : "higher"}!`);
     } else {
-        targetStat.stage = targetStat.stage + change;
-        let message;
+        if (targetPokemon === attackPoke) {
+            attackPoke.stats[convertedStat].stage = attackPoke.stats[convertedStat].stage + change
+        } else {
+            defendPoke.stats[convertedStat].stage = defendPoke.stats[convertedStat].stage + change
+        }
 
+        let message;
         if (target === "user") {
             switch (change) {
                 case 1:
@@ -421,10 +421,79 @@ const updateStatChange = (attackPoke, defendPoke, { target, stat, change }) => {
         console.log(`${targetPokemon.name}'s ${stat} ${message}`);
     }
 }
+const doesMoveHit = (accuracy, evasion, moveAccuracy) => {
+    const combinedStage = accuracy - evasion;
+    let convertedStage;
+
+    if (combinedStage > 6) {
+        convertedStage = (9 / 3)
+    } else if (combinedStage < -6) {
+        convertedStage = (3 / 9)
+    } else {
+        switch (combinedStage) {
+            case -6:
+                convertedStage = (3 / 9);
+                break;
+            case -5:
+                convertedStage = (3 / 8);
+                break;
+            case -4:
+                convertedStage = (3 / 7);
+                break;
+            case -3:
+                convertedStage = (3 / 6)
+                break;
+            case -2:
+                convertedStage = (3 / 5)
+                break;
+            case -1:
+                convertedStage = (3 / 4)
+                break;
+            case 1:
+                convertedStage = (4 / 3)
+                break;
+            case 2:
+                convertedStage = (5 / 3)
+                break;
+            case 3:
+                convertedStage = (6 / 3)
+                break;
+            case 4:
+                convertedStage = (7 / 3)
+                break;
+            case 5:
+                convertedStage = (8 / 3)
+                break;
+            case 6:
+                convertedStage = (9 / 3)
+                break;
+            default:
+                convertedStage = (3 / 3)
+                break;
+        }
+    }
+
+    const hitChance = Math.floor(moveAccuracy * convertedStage);
+    const random = helpers.randomInt(100) + 1;
+
+    return random <= hitChance
+}
 const executeMove = async (attackPoke, defendPoke, move) => {
 
     console.log(`${attackPoke.name} used ${move.name}!`);
     move.pp--
+
+    if (!doesMoveHit(attackPoke.stats.accuracy.stage, defendPoke.stats.evasion.stage, move.accuracy)) {
+        await helpers.delay(1500);
+        if (attackPoke.stats.accuracy < 0 || move.accuracy < 100) {
+            console.log("The attack missed!");
+        } else {
+            console.log(`${defendPoke.name} evaded the attack!`);
+        }
+
+        return true;
+    }
+
     await helpers.delay(1500);
 
     if (move.damageClass !== "status") {
