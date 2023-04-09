@@ -1,5 +1,5 @@
 class Pokemon {
-    constructor(name, description, typeOne, typeTwo, level, nature, stats, moves) {
+    constructor(name, description, typeOne, typeTwo, level, nature, stats, moves, ailment) {
         this.name = name;
         this.description = description;
         this.typeOne = typeOne;
@@ -10,6 +10,7 @@ class Pokemon {
         this.nature = nature;
         this.stats = stats;
         this.moves = moves;
+        this.ailment = ailment;
     }
 }
 
@@ -38,7 +39,7 @@ class Stat {
 }
 
 class Move {
-    constructor(name, description, type, power, pp, damageClass, statChanges, accuracy, priority, critRate, category) {
+    constructor(name, description, type, power, pp, damageClass, statChanges, accuracy, priority, critRate, category, ailment, effectChance) {
         this.name = name;
         this.description = description;
         this.type = type;
@@ -50,6 +51,8 @@ class Move {
         this.priority = priority;
         this.critRate = critRate;
         this.category = category;
+        this.ailment = ailment;
+        this.effectChance = effectChance;
     }
 }
 
@@ -99,11 +102,33 @@ class Nature {
     }
 }
 
+class Ailment {
+    constructor(name, persistent) {
+        this.name = name;
+        this.persistent = persistent;
+    }
+
+    // Also need to update that physical damage is halved when burned
+    burnAilment = (pokemon) => {
+        if (this.name === "burn") {
+            let damage = Math.floor(pokemon.stats.hp.starting / 16);
+            if (damage < 1) {
+                damage = 1
+            }
+
+            pokemon.stats.hp.value = pokemon.stats.hp.value - damage;
+
+            return;
+        }
+    }
+}
+
 export {
     Pokemon,
     Stats,
     Stat,
     Move,
     StatChange,
-    Nature
+    Nature,
+    Ailment
 }

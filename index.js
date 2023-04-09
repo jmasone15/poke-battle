@@ -164,7 +164,9 @@ const createMoveClass = async (url) => {
         moveData.accuracy,
         moveData.priority,
         moveData.meta.crit_rate,
-        moveData.meta.category.name
+        moveData.meta.category.name,
+        moveData.meta.ailment.name,
+        moveData.effect_chance
     );
 }
 const createPokeClass = async ({ name, types, stats, species }, moves) => {
@@ -499,6 +501,7 @@ const executeMove = async (attackPoke, defendPoke, move) => {
 
     await helpers.delay(1500);
 
+    // Damage Move
     if (move.damageClass !== "status") {
         const { totalDamage, damageObject } = calculateDamage(attackPoke, defendPoke, move);
 
@@ -539,12 +542,27 @@ const executeMove = async (attackPoke, defendPoke, move) => {
         console.log(`${defendPoke.name} has ${remainingHealth} hp remaining.`);
     }
 
+    // Related Stat Changes
     if (move.statChanges.length !== 0) {
-        for (let i = 0; i < move.statChanges.length; i++) {
-            updateStatChange(attackPoke, defendPoke, move.statChanges[i]);
-            await helpers.delay(1500);
+        let boolStatChange = true;
+
+        if (move.effect_chance !== null) {
+            boolStatChange = helpers.randomInt(100) + 1 <= 100;
+        }
+
+        if (boolStatChange) {
+            for (let i = 0; i < move.statChanges.length; i++) {
+                updateStatChange(attackPoke, defendPoke, move.statChanges[i]);
+                await helpers.delay(1500);
+            }
+    
         }
     }
+
+    // Move Ailments
+    // if (move.ailment !== "none") {
+    //     console.log(move.ailment);
+    // }
 
     return true;
 }
