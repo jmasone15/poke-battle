@@ -229,8 +229,6 @@ const battleSequence = async (userPokemon, sysPokemon) => {
     while (true) {
         console.clear();
 
-        console.log(userPokemon.stats, sysPokemon.stats);
-
         let { userMove, systemMove } = await battleMoves(userPokemon, sysPokemon.moves);
         let userFirst = doesUserMoveFirst(userPokemon, sysPokemon, userMove, systemMove);
 
@@ -422,6 +420,11 @@ const updateStatChange = (attackPoke, defendPoke, { target, stat, change }) => {
     }
 }
 const doesMoveHit = (accuracy, evasion, moveAccuracy) => {
+
+    if (moveAccuracy === null) {
+        return true;
+    }
+
     const combinedStage = accuracy - evasion;
     let convertedStage;
 
