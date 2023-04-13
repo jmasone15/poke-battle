@@ -1,5 +1,5 @@
 class Pokemon {
-    constructor(name, description, typeOne, typeTwo, level, nature, stats, moves, ailment) {
+    constructor(name, description, typeOne, typeTwo, level, nature, stats, moves, ailments) {
         this.name = name;
         this.description = description;
         this.typeOne = typeOne;
@@ -10,7 +10,7 @@ class Pokemon {
         this.nature = nature;
         this.stats = stats;
         this.moves = moves;
-        this.ailment = ailment;
+        this.ailments = [];
     }
 }
 
@@ -102,23 +102,43 @@ class Nature {
     }
 }
 
+// Three Types of Status Conditions
+// - Before Turn: [Freeze, Sleep, Infatuation, Flinch, Paralysis, Confusion]
+// - During Turn: [Taunt]
+// - After Turn: [Burn, Poison]
+// - Other: [Can't Escape]
 class Ailment {
-    constructor(name, persistent) {
+    constructor(name, volatile) {
         this.name = name;
-        this.persistent = persistent;
+        this.volatile = volatile;
+        this.beforeTurn = ["freeze", "sleep", "paralysis", "confusion"].includes(name);
+        this.duringTurn = ["taunt"].includes(name);
+        this.afterTurn = ["burn", "poison"].includes(name);
+        this.other = ["can't escape"].includes(name);
     }
 
     // Also need to update that physical damage is halved when burned
     burnAilment = (pokemon) => {
-        if (this.name === "burn") {
-            let damage = Math.floor(pokemon.stats.hp.starting / 16);
-            if (damage < 1) {
-                damage = 1
-            }
+        let damage = Math.floor(pokemon.stats.hp.starting / 16);
+        if (damage < 1) {
+            damage = 1
+        }
 
-            pokemon.stats.hp.value = pokemon.stats.hp.value - damage;
+        console.log(`${pokemon.name} was hurt by it's burn!`);
+        pokemon.stats.hp.value = pokemon.stats.hp.value - damage;
 
-            return;
+        return;
+    }
+
+    ailmentFunc = (pokemon) => {
+        switch (this.name) {
+            case "burn":
+                this.burnAilment(pokemon)
+                break;
+
+            default:
+                console.log("Pokemon does not have an ailment.");
+                break;
         }
     }
 }

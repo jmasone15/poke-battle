@@ -1,4 +1,5 @@
 // Ailments
+// All move categories
 // Unqiue category moves
 // Move meta data (flinch, self-stat increase, effects)
 // Abilities
@@ -12,7 +13,7 @@
 
 import inquirer from "inquirer";
 import axios from "axios";
-import { Pokemon, Stats, Move, Stat, StatChange, Nature } from "./classes.js";
+import { Pokemon, Stats, Move, Stat, StatChange, Nature, Ailment } from "./classes.js";
 import helpers from "./helpers.js";
 
 // Program Entry Function
@@ -257,6 +258,16 @@ const battleSequence = async (userPokemon, sysPokemon) => {
         if (!moveTwoResult) {
             break;
         }
+
+        const ailmentOneResult = await executeAfterAilment(userFirst ? userPokemon : sysPokemon);
+        if (!ailmentOneResult) {
+            break;
+        }
+
+        const ailmentTwoResult = await executeAfterAilment(userFirst ? sysPokemon : userPokemon);
+        if (!ailmentTwoResult) {
+            break;
+        }
     }
 
     return;
@@ -375,52 +386,6 @@ const calculateDamage = (attackPoke, defendPoke, move) => {
         damageObject
     }
 }
-const updateStatChange = (attackPoke, defendPoke, { target, stat, change }) => {
-    const targetPokemon = target === "user" ? attackPoke : defendPoke;
-    const convertedStat = stat === "special-attack" || stat === "special-defense" ? stat === "special-attack" ? "specialAttack" : "specialDefense" : stat;
-    const targetStat = targetPokemon.stats[convertedStat];
-
-    console.log(targetPokemon.name, convertedStat, targetStat);
-
-    if (targetStat.stage == 6 || targetStat.stage == -6) {
-        console.log(`${targetPokemon.name}'s ${stat} won't go any ${change < 0 ? "lower" : "higher"}!`);
-    } else {
-        if (targetPokemon === attackPoke) {
-            attackPoke.stats[convertedStat].stage = attackPoke.stats[convertedStat].stage + change
-        } else {
-            defendPoke.stats[convertedStat].stage = defendPoke.stats[convertedStat].stage + change
-        }
-
-        let message;
-        if (target === "user") {
-            switch (change) {
-                case 1:
-                    message = "rose!"
-                    break;
-                case 2:
-                    message = "rose sharply!"
-                    break;
-                default:
-                    message = "rose drastically!"
-                    break;
-            }
-        } else {
-            switch (change) {
-                case -1:
-                    message = "fell!"
-                    break;
-                case -2:
-                    message = "harshly fell!"
-                    break;
-                default:
-                    message = "severely fell!"
-                    break;
-            }
-        }
-
-        console.log(`${targetPokemon.name}'s ${stat} ${message}`);
-    }
-}
 const doesMoveHit = (accuracy, evasion, moveAccuracy) => {
 
     if (moveAccuracy === null) {
@@ -488,6 +453,7 @@ const executeMove = async (attackPoke, defendPoke, move) => {
     console.log(`${attackPoke.name} used ${move.name}!`);
     move.pp--
 
+    // Accuracy/Evasion Calculation
     if (!doesMoveHit(attackPoke.stats.accuracy.stage, defendPoke.stats.evasion.stage, move.accuracy)) {
         await helpers.delay(1500);
         if (attackPoke.stats.accuracy < 0 || move.accuracy < 100) {
@@ -501,70 +467,200 @@ const executeMove = async (attackPoke, defendPoke, move) => {
 
     await helpers.delay(1500);
 
-    // Damage Move
-    if (move.damageClass !== "status") {
-        const { totalDamage, damageObject } = calculateDamage(attackPoke, defendPoke, move);
+    switch (move.category) {
+        case "damage":
+            await damageMove(attackPoke, defendPoke, move);
+            break;
 
-        if (totalDamage == 0) {
-            console.log("The move had no effect...");
-            return true;
-        }
+        case "ailment":
+            await ailmentMoveOrChange(defendPoke, move);
+            break;
 
-        if (damageObject.critMod !== 1) {
-            console.log("Critical Hit!");
-            await helpers.delay(1500);
-        }
-        if (damageObject.typeMod !== 1) {
-            if (damageObject.typeMod > 1) {
-                console.log("It's super effective!");
-                await helpers.delay(1500);
-            } else {
-                console.log("It's not very effective.");
-                await helpers.delay(1500);
-            }
-        }
+        case "net-good-stats":
+            await statusMoveOrChange(attackPoke, defendPoke, move);
+            break;
 
-        const remainingHealth = defendPoke.stats.hp.value - totalDamage
+        case "heal":
+            console.log("heal");
+            break;
 
-        if (remainingHealth <= 0) {
-            defendPoke.stats.hp.value = 0;
+        case "damage+ailment":
+            await damageMove(attackPoke, defendPoke, move);
+            await ailmentMoveOrChange(defendPoke, move);
+            break;
 
-            console.log(`${defendPoke.name} has fainted!`);
-            await helpers.delay(1500);
+        case "swagger":
+            console.log("swagger");
+            break;
 
-            return false;
-        }
+        case "damage+lower":
+            await damageMove(attackPoke, defendPoke, move);
+            await statusMoveOrChange(attackPoke, defendPoke, move);
+            break;
 
-        defendPoke.stats.hp.value = remainingHealth;
+        case "damage+raise":
+            await damageMove(attackPoke, defendPoke, move);
+            await statusMoveOrChange(attackPoke, defendPoke, move);
+            break;
 
-        console.log(`${defendPoke.name} took ${totalDamage} damage!`);
+        case "damage+heal":
+            await damageMove(attackPoke, defendPoke, move);
+            break;
+
+        case "ohko":
+            console.log("ohko");
+            break;
+
+        case "whole-field-effect":
+            console.log("whole-field-effect");
+            break;
+
+        case "field-effect":
+            console.log("field-effect");
+            break;
+
+        case "force-switch":
+            console.log("force-switch");
+            break;
+
+        default:
+            console.log("unique");
+            break;
+    }
+
+    if (defendPoke.stats.hp.value <= 0) {
+        defendPoke.stats.hp.value = 0;
+
+        console.log(`${defendPoke.name} has fainted!`);
         await helpers.delay(1500);
-        console.log(`${defendPoke.name} has ${remainingHealth} hp remaining.`);
+
+        return false;
     }
-
-    // Related Stat Changes
-    if (move.statChanges.length !== 0) {
-        let boolStatChange = true;
-
-        if (move.effect_chance !== null) {
-            boolStatChange = helpers.randomInt(100) + 1 <= 100;
-        }
-
-        if (boolStatChange) {
-            for (let i = 0; i < move.statChanges.length; i++) {
-                updateStatChange(attackPoke, defendPoke, move.statChanges[i]);
-                await helpers.delay(1500);
-            }
-    
-        }
-    }
-
-    // Move Ailments
-    // if (move.ailment !== "none") {
-    //     console.log(move.ailment);
-    // }
 
     return true;
+}
+const damageMove = async (attackPoke, defendPoke, move) => {
+    const { totalDamage, damageObject } = calculateDamage(attackPoke, defendPoke, move);
+
+    if (totalDamage == 0) {
+        console.log("The move had no effect...");
+        return true;
+    }
+
+    if (damageObject.critMod !== 1) {
+        console.log("Critical Hit!");
+        await helpers.delay(1500);
+    }
+    if (damageObject.typeMod !== 1) {
+        if (damageObject.typeMod > 1) {
+            console.log("It's super effective!");
+            await helpers.delay(1500);
+        } else {
+            console.log("It's not very effective.");
+            await helpers.delay(1500);
+        }
+    }
+
+    const remainingHealth = defendPoke.stats.hp.value - totalDamage
+    defendPoke.stats.hp.value = remainingHealth;
+    console.log(`${defendPoke.name} took ${totalDamage} damage!`);
+}
+const statusMoveOrChange = async (attackPoke, defendPoke, move) => {
+    let boolStatChange = true;
+
+    if (move.effect_chance !== null) {
+        boolStatChange = helpers.randomInt(100) + 1 <= 100;
+    }
+
+    if (boolStatChange) {
+        for (let i = 0; i < move.statChanges.length; i++) {
+            const { target, stat, change } = move.statChanges[i];
+            const targetPokemon = target === "user" ? attackPoke : defendPoke;
+            const convertedStat = stat === "special-attack" || stat === "special-defense" ? stat === "special-attack" ? "specialAttack" : "specialDefense" : stat;
+            const targetStat = targetPokemon.stats[convertedStat];
+
+            if (targetStat.stage == 6 || targetStat.stage == -6) {
+                console.log(`${targetPokemon.name}'s ${stat} won't go any ${change < 0 ? "lower" : "higher"}!`);
+            } else {
+                if (targetPokemon === attackPoke) {
+                    attackPoke.stats[convertedStat].stage = attackPoke.stats[convertedStat].stage + change
+                } else {
+                    defendPoke.stats[convertedStat].stage = defendPoke.stats[convertedStat].stage + change
+                }
+
+                let message;
+                if (target === "user") {
+                    switch (change) {
+                        case 1:
+                            message = "rose!"
+                            break;
+                        case 2:
+                            message = "rose sharply!"
+                            break;
+                        default:
+                            message = "rose drastically!"
+                            break;
+                    }
+                } else {
+                    switch (change) {
+                        case -1:
+                            message = "fell!"
+                            break;
+                        case -2:
+                            message = "harshly fell!"
+                            break;
+                        default:
+                            message = "severely fell!"
+                            break;
+                    }
+                }
+
+                console.log(`${targetPokemon.name}'s ${stat} ${message}`);
+            }
+
+            await helpers.delay(1500);
+        }
+
+    }
+}
+const ailmentMoveOrChange = async (defendPoke, move) => {
+    let boolAilmentChange = true;
+
+    if (move.effect_chance !== null) {
+        boolAilmentChange = helpers.randomInt(100) + 1 <= 100;
+    }
+
+    if (boolAilmentChange) {
+
+        // Pokemon can only be affected by one non-volatile ailment at a time.
+        const nonVolatileAilment = defendPoke.ailments.filter(x => x.volatile === false)[0];
+
+        if (nonVolatileAilment) {
+            if (move.category === "ailment") {
+                console.log("But it failed!");
+            }
+
+            return;
+        }
+
+        defendPoke.ailments.push(
+            new Ailment(
+                move.ailment,
+                !["burn", "freeze", "paralysis", "poison", "sleep"].includes(move.ailment)
+            )
+        );
+
+        switch (move.ailment) {
+            case "burn":
+                console.log(`${defendPoke.name} was burned!`);
+                break;
+
+            default:
+                break;
+        }
+
+        await helpers.delay(1500);
+    }
 }
 const viewPokemonDetails = async (pokemon, moveData) => {
 
@@ -632,6 +728,27 @@ const viewPokemonDetails = async (pokemon, moveData) => {
     } else {
         return viewPokemonDetails(pokemon, moveData ? false : true)
     }
+}
+const executeAfterAilment = async (pokemon) => {
+    const anyAilments = pokemon.ailments.filter(x => x.afterTurn);
+
+    if (anyAilments.length !== 0) {
+        anyAilments.forEach((ailment) => {
+            ailment.ailmentFunc(pokemon);
+        });
+        await helpers.delay(1500);
+    
+        if (pokemon.stats.hp.value <= 0) {
+            pokemon.stats.hp.value = 0;
+    
+            console.log(`${pokemon.name} has fainted!`);
+            await helpers.delay(1500);
+    
+            return false
+        }
+    }
+
+    return true
 }
 
 // Ending Sub-Functions
