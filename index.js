@@ -24,8 +24,8 @@ const init = async () => {
     // let pokemon = await selectPokemon();
 
     // Pokemon Creation
-    let userPokemon = await createPokemon("zubat", false);
-    let sysPokemon = await createPokemon("ditto", true);
+    let userPokemon = await createPokemon("grotle", false);
+    let sysPokemon = await createPokemon("turtwig", true);
 
     // Pokemon Battle
     await battleSequence(userPokemon, sysPokemon);
@@ -555,7 +555,7 @@ const executeMove = async (attackPoke, defendPoke, move) => {
             break;
 
         default:
-            console.log("unique");
+            await uniqueMove(attackPoke, defendPoke, move);
             break;
     }
 
@@ -731,7 +731,7 @@ const ailmentMoveOrChange = async (defendPoke, move) => {
             if (move.category === "ailment") {
                 console.log("It had no effect.");
             }
-            
+
             return;
         }
 
@@ -884,6 +884,58 @@ const executeBeforeAilment = async (pokemon, move) => {
     }
 
     return true
+}
+const uniqueMove = async (attackPoke, defendPoke, move) => {
+    switch (move.name) {
+        case "curse":
+            if (attackPoke.isType("ghost")) {
+                const filteredAilments = defendPoke.ailments.filter(x => x.name === "curse");
+
+                if (filteredAilments.length == 0) {
+                    // Cannot be blocked by protection moves
+
+                    // User takes half it's max health in damage
+                    const damage = Math.floor(attackPoke.stats.hp.starting / 2);
+                    attackPoke.stats.hp.value = attackPoke.stats.hp.value - damage;
+
+                    // Target loses 1/4 max health each turn            
+                    defendPoke.ailments.push(new Ailment("curse", true, ""));
+                    console.log(`${defendPoke.name} was cursed!`);
+
+                } else {
+                    console.log("But it failed!");
+                }
+            } else {
+                const statArray = ["speed", "attack", "defense"]
+
+                for (let i = 0; i < statArray.length; i++) {
+                    const targetStat = statArray[i];
+                    if (targetStat === "speed") {
+                        if (targetStat.stage == -6) {
+                            console.log(`${attackPoke.name}'s speed won't go any lower!`);
+                        } else {
+                            attackPoke.stats[targetStat].stage--
+                            console.log(`${attackPoke.name}'s speed fell!`);
+                        }
+                    } else {
+                        if (targetStat.stage == 6) {
+                            console.log(`${attackPoke.name}'s ${targetStat} won't go any higher!`);
+                        } else {
+                            attackPoke.stats[targetStat].stage++
+                            console.log(`${attackPoke.name}'s ${targetStat} rose!`);
+                        }
+                    }
+
+                    if (i !== 2) {
+                        await helpers.delay(1500);
+                    }
+                }
+            }
+            break;
+
+        default:
+            break;
+    }
 }
 
 // Ending Sub-Functions

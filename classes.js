@@ -123,7 +123,7 @@ class Ailment {
         this.trapMoveName = trapMoveName;
         this.beforeTurn = ["freeze", "sleep", "paralysis", "confusion"].includes(name);
         this.duringTurn = ["taunt"].includes(name);
-        this.afterTurn = ["burn", "poison", "trap"].includes(name);
+        this.afterTurn = ["burn", "poison", "trap", "curse"].includes(name);
         this.other = ["can't escape"].includes(name);
         switch (this.name) {
             case "sleep":
@@ -234,7 +234,7 @@ class Ailment {
         } else {
             const random = helpers.randomInt(100) + 1;
             this.duration--
-            
+
             console.log(`${pokemon.name} is confused!`);
 
             if (random <= 33) {
@@ -242,7 +242,7 @@ class Ailment {
                 const defenseNum = helpers.determineStatStage(pokemon.stats.defense);
                 let finalAttackNum;
                 const filteredAilments = pokemon.ailments.filter(x => x.name === "burn");
-            
+
                 if (filteredAilments.length > 0 && move.damageClass === "physical") {
                     finalAttackNum = Math.floor(attackNum * 0.5);
                 } else {
@@ -263,6 +263,18 @@ class Ailment {
         return true
     }
 
+    curseAilment(pokemon) {
+        let damage = Math.floor(pokemon.stats.hp.starting / 4);
+        if (damage < 1) {
+            damage = 1
+        }
+
+        console.log(`${pokemon.name} was hurt by it's curse!`);
+        pokemon.stats.hp.value = pokemon.stats.hp.value - damage;
+
+        return;
+    }
+
     ailmentFunc(pokemon, move) {
         switch (this.name) {
             case "burn":
@@ -279,6 +291,8 @@ class Ailment {
                 return this.trapAilment(pokemon)
             case "confusion":
                 return this.confusionAilment(pokemon)
+            case "curse":
+                return this.curseAilment(pokemon)
             default:
                 console.log("Pokemon does not have an ailment.");
                 break;
@@ -295,6 +309,3 @@ export {
     Nature,
     Ailment
 }
-
-// Sleep Side Effects
-// Lasts 1 to 3 turns randomly chosen (If pokemon uses Rest, it is exactly two turns)
