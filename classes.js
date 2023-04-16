@@ -123,7 +123,7 @@ class Ailment {
         this.trapMoveName = trapMoveName;
         this.beforeTurn = ["freeze", "sleep", "paralysis", "confusion"].includes(name);
         this.duringTurn = ["taunt"].includes(name);
-        this.afterTurn = ["burn", "poison", "trap", "curse"].includes(name);
+        this.afterTurn = ["burn", "poison", "trap", "curse", "yawn"].includes(name);
         this.other = ["can't escape"].includes(name);
         switch (this.name) {
             case "sleep":
@@ -138,6 +138,7 @@ class Ailment {
             default:
                 break;
         }
+        this.initial = this.name === "yawn"
     }
 
     // Also need to update that physical damage is halved when burned
@@ -275,6 +276,22 @@ class Ailment {
         return;
     }
 
+    yawnAilment(pokemon) {
+        if (this.initial) {
+            this.initial = false;
+            console.log(`${pokemon.name} is getting sleepy!`);
+        } else {
+            pokemon.ailments.push(new Ailment("sleep", false, ""));
+
+            const filteredAilments = pokemon.ailments.filter(x => x.name !== "yawn");
+            pokemon.ailments = filteredAilments
+
+            console.log(`${pokemon.name} fell asleep!`);
+        }
+
+        return;
+    }
+
     ailmentFunc(pokemon, move) {
         switch (this.name) {
             case "burn":
@@ -293,6 +310,8 @@ class Ailment {
                 return this.confusionAilment(pokemon)
             case "curse":
                 return this.curseAilment(pokemon)
+            case "yawn":
+                return this.yawnAilment(pokemon)
             default:
                 console.log("Pokemon does not have an ailment.");
                 break;

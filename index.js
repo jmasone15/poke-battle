@@ -24,7 +24,7 @@ const init = async () => {
     // let pokemon = await selectPokemon();
 
     // Pokemon Creation
-    let userPokemon = await createPokemon("grotle", false);
+    let userPokemon = await createPokemon("snorlax", false);
     let sysPokemon = await createPokemon("turtwig", true);
 
     // Pokemon Battle
@@ -714,6 +714,22 @@ const ailmentMoveOrChange = async (defendPoke, move) => {
                 }
 
                 break;
+
+            case "yawn":
+                const yawnAndSleepAilment = defendPoke.ailments.filter(x => x.name === "yawn" || x.name === "sleep");
+                if (yawnAndSleepAilment.length !== 0) {
+                    specialityCase = true
+                }
+
+                break;
+            case "sleep":
+                const yawnAilment = defendPoke.ailments.filter(x => x.name === "yawn");
+                if (yawnAilment.length !== 0) {
+                    const filterOutAilments = defendPoke.ailments.filter(x => x.name !== "yawn");
+                    defendPoke.ailments = filterOutAilments
+                }
+
+                break;
             default:
                 break;
         }
@@ -768,6 +784,9 @@ const ailmentMoveOrChange = async (defendPoke, move) => {
                 break;
             case "confusion":
                 console.log(`${defendPoke.name} was confused!`);
+                break;
+            case "yawn":
+                console.log(`${defendPoke.name} became drowsy!`);
                 break;
             default:
                 break;
