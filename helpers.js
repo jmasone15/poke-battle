@@ -238,6 +238,37 @@ const determineNature = () => {
     return natureArray[randomInt(25)];
 }
 
+const determineStatStage = ({ value, stage }) => {
+    switch (stage) {
+        case -6:
+            return value * (2 / 8)
+        case -5:
+            return value * (2 / 7)
+        case -4:
+            return value * (2 / 6)
+        case -3:
+            return value * (2 / 5)
+        case -2:
+            return value * (2 / 4)
+        case -1:
+            return value * (2 / 3)
+        case 1:
+            return value * (3 / 2)
+        case 2:
+            return value * (4 / 2)
+        case 3:
+            return value * (5 / 2)
+        case 4:
+            return value * (6 / 2)
+        case 5:
+            return value * (7 / 2)
+        case 6:
+            return value * (8 / 2)
+        default:
+            return value
+    }
+}
+
 export default {
     typeMatrix,
     filterMoveSet,
@@ -250,5 +281,6 @@ export default {
     pascalCase,
     filterPokeType,
     findDescription,
-    determineNature
+    determineNature,
+    determineStatStage
 }

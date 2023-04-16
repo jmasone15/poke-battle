@@ -24,8 +24,8 @@ const init = async () => {
     // let pokemon = await selectPokemon();
 
     // Pokemon Creation
-    let userPokemon = await createPokemon("ponyta", false);
-    let sysPokemon = await createPokemon("caterpie", true);
+    let userPokemon = await createPokemon("zubat", false);
+    let sysPokemon = await createPokemon("ditto", true);
 
     // Pokemon Battle
     await battleSequence(userPokemon, sysPokemon);
@@ -381,42 +381,12 @@ const doesUserMoveFirst = (user, system, userMove, systemMove) => {
 
     return userFirst
 }
-const determineStatStage = ({ value, stage }) => {
-    switch (stage) {
-        case -6:
-            return value * (2 / 8)
-        case -5:
-            return value * (2 / 7)
-        case -4:
-            return value * (2 / 6)
-        case -3:
-            return value * (2 / 5)
-        case -2:
-            return value * (2 / 4)
-        case -1:
-            return value * (2 / 3)
-        case 1:
-            return value * (3 / 2)
-        case 2:
-            return value * (4 / 2)
-        case 3:
-            return value * (5 / 2)
-        case 4:
-            return value * (6 / 2)
-        case 5:
-            return value * (7 / 2)
-        case 6:
-            return value * (8 / 2)
-        default:
-            return value
-    }
-}
 const calculateStatDamage = (attackPoke, defendPoke, move) => {
     const isPhysical = move.damageClass === "physical";
     const attackStat = isPhysical ? attackPoke.stats.attack : attackPoke.stats.specialAttack;
     const defenseStat = isPhysical ? defendPoke.stats.defense : defendPoke.stats.specialDefense;
 
-    return { attackNum: determineStatStage(attackStat), defenseNum: determineStatStage(defenseStat) }
+    return { attackNum: helpers.determineStatStage(attackStat), defenseNum: helpers.determineStatStage(defenseStat) }
 }
 const calculateDamage = (attackPoke, defendPoke, move) => {
     const { attackNum, defenseNum } = calculateStatDamage(attackPoke, defendPoke, move);
@@ -711,6 +681,7 @@ const ailmentMoveOrChange = async (defendPoke, move) => {
 
         // Pokemon can only be affected by one non-volatile ailment at a time.
         const nonVolatileAilment = defendPoke.ailments.filter(x => x.volatile === false)[0];
+        const existingAilment = defendPoke.ailments.filter(x => x.name === move.ailment);
 
         // Speciality Cases
         let specialityCase = false;
@@ -748,7 +719,7 @@ const ailmentMoveOrChange = async (defendPoke, move) => {
         }
 
 
-        if (nonVolatileAilment) {
+        if (nonVolatileAilment || existingAilment.length !== 0) {
             if (move.category === "ailment") {
                 console.log("But it failed!");
             }
@@ -760,14 +731,21 @@ const ailmentMoveOrChange = async (defendPoke, move) => {
             if (move.category === "ailment") {
                 console.log("It had no effect.");
             }
+            
+            return;
         }
 
+        const newAilment = new Ailment(
+            move.ailment,
+            !["burn", "freeze", "paralysis", "poison", "sleep"].includes(move.ailment),
+            move.ailment === "trap" ? move.name : ""
+        )
+
         defendPoke.ailments.push(
-            new Ailment(
-                move.ailment,
-                !["burn", "freeze", "paralysis", "poison", "sleep"].includes(move.ailment)
-            )
+            newAilment
         );
+
+        console.log(newAilment);
 
         switch (move.ailment) {
             case "burn":
@@ -787,6 +765,9 @@ const ailmentMoveOrChange = async (defendPoke, move) => {
                 break;
             case "trap":
                 console.log(`${defendPoke.name} was trapped by ${move.name}!`);
+                break;
+            case "confusion":
+                console.log(`${defendPoke.name} was confused!`);
                 break;
             default:
                 break;
@@ -829,11 +810,11 @@ const viewPokemonDetails = async (pokemon, moveData) => {
         console.log("Pokemon Stats");
         console.table(
             {
-                "Attack": determineStatStage(pokemon.stats.attack),
-                "Defense": determineStatStage(pokemon.stats.defense),
-                "Special Attack": determineStatStage(pokemon.stats.specialAttack),
-                "Special Defense": determineStatStage(pokemon.stats.specialDefense),
-                "Speed": determineStatStage(pokemon.stats.speed)
+                "Attack": helpers.determineStatStage(pokemon.stats.attack),
+                "Defense": helpers.determineStatStage(pokemon.stats.defense),
+                "Special Attack": helpers.determineStatStage(pokemon.stats.specialAttack),
+                "Special Defense": helpers.determineStatStage(pokemon.stats.specialDefense),
+                "Speed": helpers.determineStatStage(pokemon.stats.speed)
             }
         );
         console.log("\n");

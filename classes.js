@@ -117,14 +117,27 @@ class Nature {
 // - After Turn: [Burn, Poison]
 // - Other: [Can't Escape]
 class Ailment {
-    constructor(name, volatile) {
+    constructor(name, volatile, trapMoveName) {
         this.name = name;
         this.volatile = volatile;
+        this.trapMoveName = trapMoveName;
         this.beforeTurn = ["freeze", "sleep", "paralysis", "confusion"].includes(name);
         this.duringTurn = ["taunt"].includes(name);
         this.afterTurn = ["burn", "poison", "trap"].includes(name);
         this.other = ["can't escape"].includes(name);
-        this.sleepDuration = this.name === "sleep" ? Math.floor(Math.random() * 3) + 1 : null;
+        switch (this.name) {
+            case "sleep":
+                this.duration = Math.floor(Math.random() * 3) + 1
+                break;
+            case "trap":
+                this.duration = Math.floor(Math.random() * 2) + 4
+                break;
+            case "confusion":
+                this.duration = Math.floor(Math.random() * 4) + 1
+                break;
+            default:
+                break;
+        }
     }
 
     // Also need to update that physical damage is halved when burned
@@ -184,31 +197,70 @@ class Ailment {
     }
 
     sleepAilment(pokemon) {
-        console.log(this.sleepDuration);
-
-        if (this.sleepDuration === 0) {
+        if (this.duration === 0) {
             console.log(`${pokemon.name} woke up!`);
             return true
         } else {
-            this.sleepDuration--
+            this.duration--
             console.log(`${pokemon.name} is fast asleep!`);
             return false
         }
     }
 
-    trapAilment(pokemon, move) {
+    trapAilment(pokemon) {
         // If usr that uses the binding move faints, the trap ailment is removed.
         // Cannot be switched out if trapped unless Ghost-type.
 
-        let damage = Math.floor(pokemon.stats.hp.starting / 8);
-        if (damage < 1) {
-            damage = 1
+        if (this.duration == 0) {
+            console.log(`${pokemon.name} was freed from ${this.trapMoveName}`);
+        } else {
+            this.duration--
+
+            let damage = Math.floor(pokemon.stats.hp.starting / 8);
+            if (damage < 1) {
+                damage = 1
+            }
+
+            console.log(`${pokemon.name} is hurt by ${this.trapMoveName}!`);
+            pokemon.stats.hp.value = pokemon.stats.hp.value - damage;
         }
 
-        console.log(`${pokemon.name} is hurt by ${move.name}!`);
-        pokemon.stats.hp.value = pokemon.stats.hp.value - damage;
-
         return;
+    }
+
+    confusionAilment(pokemon, move) {
+        if (this.duration == 0) {
+            console.log(`${pokemon.name} snapped out of confusion!`);
+        } else {
+            const random = helpers.randomInt(100) + 1;
+            this.duration--
+            
+            console.log(`${pokemon.name} is confused!`);
+
+            if (random <= 33) {
+                const attackNum = helpers.determineStatStage(pokemon.stats.attack);
+                const defenseNum = helpers.determineStatStage(pokemon.stats.defense);
+                let finalAttackNum;
+                const filteredAilments = pokemon.ailments.filter(x => x.name === "burn");
+            
+                if (filteredAilments.length > 0 && move.damageClass === "physical") {
+                    finalAttackNum = Math.floor(attackNum * 0.5);
+                } else {
+                    finalAttackNum = attackNum
+                }
+                let damage = (((pokemon.level * 2) / 5) + 2 * 40 * (finalAttackNum / defenseNum) / 50) + 2;
+                if (damage < 1) {
+                    damage = 1
+                }
+
+                console.log("It hurt itself in confusion!");
+                pokemon.stats.hp.value = pokemon.stats.hp.value - damage;
+
+                return false
+            }
+        }
+
+        return true
     }
 
     ailmentFunc(pokemon, move) {
@@ -224,7 +276,9 @@ class Ailment {
             case "sleep":
                 return this.sleepAilment(pokemon)
             case "trap":
-                return this.trapAilment(pokemon, move)
+                return this.trapAilment(pokemon)
+            case "confusion":
+                return this.confusionAilment(pokemon)
             default:
                 console.log("Pokemon does not have an ailment.");
                 break;
