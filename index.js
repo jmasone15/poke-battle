@@ -24,7 +24,7 @@ const init = async () => {
     // let pokemon = await selectPokemon();
 
     // Pokemon Creation
-    let userPokemon = await createPokemon("magnemite", false);
+    let userPokemon = await createPokemon("gengar", false);
     let sysPokemon = await createPokemon("starly", true);
 
     // Pokemon Battle
@@ -422,9 +422,18 @@ const calculateDamage = (attackPoke, defendPoke, move) => {
     const { attackNum, defenseNum } = calculateStatDamage(attackPoke, defendPoke, move);
     const typeOneMod = helpers.typeMatrix(move.type, defendPoke.typeOne);
     const typeTwoMod = !defendPoke.typeTwo ? 1 : helpers.typeMatrix(move.type, defendPoke.typeTwo);
+    let finalAttackNum;
+
+    const filteredAilments = defendPoke.ailments.filter(x => x.name === "burn");
+
+    if (filteredAilments.length > 0 && move.damageClass === "physical") {
+        finalAttackNum = Math.floor(attackNum * 0.5);
+    } else {
+        finalAttackNum = attackNum
+    }
 
     const damageObject = {
-        baseDamage: (((attackPoke.level * 2) / 5) + 2 * move.power * (attackNum / defenseNum) / 50) + 2,
+        baseDamage: (((attackPoke.level * 2) / 5) + 2 * move.power * (finalAttackNum / defenseNum) / 50) + 2,
         // 4.17% || 12.5%
         critMod: helpers.randomInt(move.critRate == 0 ? 24 : 8) == 0 ? 1.5 : 1,
         randomMod: helpers.randomIntRange(85, 100) / 100,
@@ -720,10 +729,16 @@ const ailmentMoveOrChange = async (defendPoke, move) => {
                 }
 
                 break;
-
             case "paralysis":
-                // Fire Type Pokemon cannot be burned
+                // Electric Type Pokemon cannot be paralyzed
                 if (defendPoke.isType("electric")) {
+                    specialityCase = true
+                }
+
+                break;
+            case "poison":
+                // Poison and Steel Type Pokemon cannot be poisoned
+                if (defendPoke.isType("poison") || defendPoke.isType("steel")) {
                     specialityCase = true
                 }
 
@@ -764,7 +779,9 @@ const ailmentMoveOrChange = async (defendPoke, move) => {
             case "paralysis":
                 console.log(`${defendPoke.name} was paralyzed!`);
                 break;
-
+            case "poison":
+                console.log(`${defendPoke.name} was poisoned!`);
+                break;
             default:
                 break;
         }

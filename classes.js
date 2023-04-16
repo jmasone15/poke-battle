@@ -139,6 +139,18 @@ class Ailment {
         return;
     }
 
+    poisonAilment(pokemon) {
+        let damage = Math.floor(pokemon.stats.hp.starting / 8);
+        if (damage < 1) {
+            damage = 1
+        }
+
+        console.log(`${pokemon.name} is hurt by it's poison!`);
+        pokemon.stats.hp.value = pokemon.stats.hp.value - damage;
+
+        return;
+    }
+
     freezeAilment(pokemon, move) {
         // 20% chance to be unthawed
         const random = Math.floor(Math.random() * 5) + 1;
@@ -178,6 +190,8 @@ class Ailment {
                 return this.freezeAilment(pokemon, move)
             case "paralysis":
                 return this.paralysisAilment(pokemon)
+            case "poison":
+                return this.poisonAilment(pokemon)
             default:
                 console.log("Pokemon does not have an ailment.");
                 break;
@@ -194,3 +208,6 @@ export {
     Nature,
     Ailment
 }
+
+// Poison side effects
+// 1/8 of total hp every turn
