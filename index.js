@@ -21,11 +21,11 @@ const init = async () => {
     console.clear();
 
     // Inquirer Pokemon Select
-    // let pokemon = await selectPokemon();
+    let pokemon = await selectPokemon();
 
     // Pokemon Creation
-    let userPokemon = await createPokemon("gengar", false);
-    let sysPokemon = await createPokemon("starly", true);
+    let userPokemon = await createPokemon(pokemon, false);
+    let sysPokemon = await createPokemon("caterpie", true);
 
     // Pokemon Battle
     await battleSequence(userPokemon, sysPokemon);
