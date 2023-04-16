@@ -1,3 +1,5 @@
+import helpers from "./helpers.js";
+
 class Pokemon {
     constructor(name, description, typeOne, typeTwo, level, nature, stats, moves, ailments) {
         this.name = name;
@@ -151,9 +153,21 @@ class Ailment {
         } else {
             console.log(`${pokemon.name} is frozen solid!`);
         }
-        
+
 
         return isThawed
+    }
+
+    paralysisAilment(pokemon) {
+        // 25% for move to not execute
+        const random = helpers.randomInt(100) + 1;
+        const moveExecution = random > 25
+
+        if (!moveExecution) {
+            console.log(`${pokemon.name} is paralyzed!`);
+        }
+
+        return moveExecution
     }
 
     ailmentFunc(pokemon, move) {
@@ -162,7 +176,8 @@ class Ailment {
                 return this.burnAilment(pokemon)
             case "freeze":
                 return this.freezeAilment(pokemon, move)
-
+            case "paralysis":
+                return this.paralysisAilment(pokemon)
             default:
                 console.log("Pokemon does not have an ailment.");
                 break;

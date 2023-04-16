@@ -21,11 +21,11 @@ const init = async () => {
     console.clear();
 
     // Inquirer Pokemon Select
-    let pokemon = await selectPokemon();
+    // let pokemon = await selectPokemon();
 
     // Pokemon Creation
-    let userPokemon = await createPokemon(pokemon, false);
-    let sysPokemon = await createPokemon("caterpie", true);
+    let userPokemon = await createPokemon("magnemite", false);
+    let sysPokemon = await createPokemon("starly", true);
 
     // Pokemon Battle
     await battleSequence(userPokemon, sysPokemon);
@@ -354,14 +354,26 @@ const battleMoves = async (userPokemon, systemMoves) => {
         return { userMove, systemMove }
     }
 }
+const determinePokeSpeed = (pokemon) => {
+    let speedStatValue = pokemon.stats.speed.value;
+    const filteredAilments = pokemon.ailments.filter(x => x.name === "paralysis");
+
+    if (filteredAilments.length > 0) {
+        speedStatValue = speedStatValue * 0.5;
+    }
+
+    return Math.floor(speedStatValue)
+}
 const doesUserMoveFirst = (user, system, userMove, systemMove) => {
     let userFirst;
+    const userSpeed = determinePokeSpeed(user);
+    const sysSpeed = determinePokeSpeed(system);
 
     if (userMove.priority == systemMove.priority) {
-        if (user.stats.speed.value == system.stats.speed.value) {
+        if (userSpeed == sysSpeed) {
             userFirst = !!helpers.randomInt(2);
         } else {
-            userFirst = user.stats.speed.value > system.stats.speed.value
+            userFirst = userSpeed > sysSpeed
         }
     } else {
         userFirst = userMove.priority > systemMove.priority;
@@ -674,13 +686,15 @@ const statusMoveOrChange = async (attackPoke, defendPoke, move) => {
     }
 }
 const ailmentMoveOrChange = async (defendPoke, move) => {
+    let boolAilmentChange;
+
     if (defendPoke.stats.hp.value <= 0) {
         return;
     }
 
-    let boolAilmentChange = true;
-
-    if (move.effect_chance !== null) {
+    if (move.effect_chance === null || move.effect_chance === undefined) {
+        boolAilmentChange = true
+    } else {
         boolAilmentChange = helpers.randomInt(100) + 1 <= move.effect_chance;
     }
 
@@ -707,17 +721,30 @@ const ailmentMoveOrChange = async (defendPoke, move) => {
 
                 break;
 
+            case "paralysis":
+                // Fire Type Pokemon cannot be burned
+                if (defendPoke.isType("electric")) {
+                    specialityCase = true
+                }
+
+                break;
             default:
                 break;
         }
 
 
-        if (nonVolatileAilment || specialityCase) {
+        if (nonVolatileAilment) {
             if (move.category === "ailment") {
                 console.log("But it failed!");
             }
 
             return;
+        }
+
+        if (specialityCase) {
+            if (move.category === "ailment") {
+                console.log("It had no effect.");
+            }
         }
 
         defendPoke.ailments.push(
@@ -733,6 +760,9 @@ const ailmentMoveOrChange = async (defendPoke, move) => {
                 break;
             case "freeze":
                 console.log(`${defendPoke.name} was frozen!`);
+                break;
+            case "paralysis":
+                console.log(`${defendPoke.name} was paralyzed!`);
                 break;
 
             default:
