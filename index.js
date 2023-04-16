@@ -21,10 +21,10 @@ const init = async () => {
     console.clear();
 
     // Inquirer Pokemon Select
-    let pokemon = await selectPokemon();
+    // let pokemon = await selectPokemon();
 
     // Pokemon Creation
-    let userPokemon = await createPokemon(pokemon, false);
+    let userPokemon = await createPokemon("ponyta", false);
     let sysPokemon = await createPokemon("caterpie", true);
 
     // Pokemon Battle
@@ -235,7 +235,7 @@ const battleSequence = async (userPokemon, sysPokemon) => {
 
         // Before Ailment
         // Returns true if pokemon can move
-        const ailmentOneResultBefore = await executeBeforeAilment(userFirst ? userPokemon : sysPokemon, userFirst ? userMove : systemMove,);
+        const ailmentOneResultBefore = await executeBeforeAilment(userFirst ? userPokemon : sysPokemon, userFirst ? userMove : systemMove);
 
         // First Move
         if (ailmentOneResultBefore) {
@@ -268,7 +268,7 @@ const battleSequence = async (userPokemon, sysPokemon) => {
 
         // Before Ailment
         // Returns true if pokemon can move
-        const ailmentTwoResultBefore = await executeBeforeAilment(userFirst ? sysPokemon : userPokemon, userFirst ? systemMove : userMove,);
+        const ailmentTwoResultBefore = await executeBeforeAilment(userFirst ? sysPokemon : userPokemon, userFirst ? systemMove : userMove);
 
         // Second Move
         if (ailmentTwoResultBefore) {
@@ -299,12 +299,12 @@ const battleSequence = async (userPokemon, sysPokemon) => {
             }
         }
 
-        const ailmentOneResult = await executeAfterAilment(userFirst ? userPokemon : sysPokemon);
+        const ailmentOneResult = await executeAfterAilment(userFirst ? userPokemon : sysPokemon, userFirst ? systemMove : userMove);
         if (!ailmentOneResult) {
             break;
         }
 
-        const ailmentTwoResult = await executeAfterAilment(userFirst ? sysPokemon : userPokemon);
+        const ailmentTwoResult = await executeAfterAilment(userFirst ? sysPokemon : userPokemon, userFirst ? userMove : systemMove);
         if (!ailmentTwoResult) {
             break;
         }
@@ -785,6 +785,9 @@ const ailmentMoveOrChange = async (defendPoke, move) => {
             case "sleep":
                 console.log(`${defendPoke.name} fell asleep!`);
                 break;
+            case "trap":
+                console.log(`${defendPoke.name} was trapped by ${move.name}!`);
+                break;
             default:
                 break;
         }
@@ -859,7 +862,7 @@ const viewPokemonDetails = async (pokemon, moveData) => {
         return viewPokemonDetails(pokemon, moveData ? false : true)
     }
 }
-const executeAfterAilment = async (pokemon) => {
+const executeAfterAilment = async (pokemon, move) => {
     const anyAilments = pokemon.ailments.filter(x => x.afterTurn);
 
     if (anyAilments.length !== 0) {
@@ -867,7 +870,7 @@ const executeAfterAilment = async (pokemon) => {
         for (let i = 0; i < anyAilments.length; i++) {
             const ailment = anyAilments[i];
 
-            ailment.ailmentFunc(pokemon);
+            ailment.ailmentFunc(pokemon, move);
             await helpers.delay(1500);
 
             if (pokemon.stats.hp.value <= 0) {

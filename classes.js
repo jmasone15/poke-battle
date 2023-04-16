@@ -122,7 +122,7 @@ class Ailment {
         this.volatile = volatile;
         this.beforeTurn = ["freeze", "sleep", "paralysis", "confusion"].includes(name);
         this.duringTurn = ["taunt"].includes(name);
-        this.afterTurn = ["burn", "poison"].includes(name);
+        this.afterTurn = ["burn", "poison", "trap"].includes(name);
         this.other = ["can't escape"].includes(name);
         this.sleepDuration = this.name === "sleep" ? Math.floor(Math.random() * 3) + 1 : null;
     }
@@ -196,6 +196,21 @@ class Ailment {
         }
     }
 
+    trapAilment(pokemon, move) {
+        // If usr that uses the binding move faints, the trap ailment is removed.
+        // Cannot be switched out if trapped unless Ghost-type.
+
+        let damage = Math.floor(pokemon.stats.hp.starting / 8);
+        if (damage < 1) {
+            damage = 1
+        }
+
+        console.log(`${pokemon.name} is hurt by ${move.name}!`);
+        pokemon.stats.hp.value = pokemon.stats.hp.value - damage;
+
+        return;
+    }
+
     ailmentFunc(pokemon, move) {
         switch (this.name) {
             case "burn":
@@ -208,6 +223,8 @@ class Ailment {
                 return this.poisonAilment(pokemon)
             case "sleep":
                 return this.sleepAilment(pokemon)
+            case "trap":
+                return this.trapAilment(pokemon, move)
             default:
                 console.log("Pokemon does not have an ailment.");
                 break;
