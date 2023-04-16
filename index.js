@@ -782,6 +782,9 @@ const ailmentMoveOrChange = async (defendPoke, move) => {
             case "poison":
                 console.log(`${defendPoke.name} was poisoned!`);
                 break;
+            case "sleep":
+                console.log(`${defendPoke.name} fell asleep!`);
+                break;
             default:
                 break;
         }

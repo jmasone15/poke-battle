@@ -124,6 +124,7 @@ class Ailment {
         this.duringTurn = ["taunt"].includes(name);
         this.afterTurn = ["burn", "poison"].includes(name);
         this.other = ["can't escape"].includes(name);
+        this.sleepDuration = this.name === "sleep" ? Math.floor(Math.random() * 3) + 1 : null;
     }
 
     // Also need to update that physical damage is halved when burned
@@ -182,6 +183,19 @@ class Ailment {
         return moveExecution
     }
 
+    sleepAilment(pokemon) {
+        console.log(this.sleepDuration);
+
+        if (this.sleepDuration === 0) {
+            console.log(`${pokemon.name} woke up!`);
+            return true
+        } else {
+            this.sleepDuration--
+            console.log(`${pokemon.name} is fast asleep!`);
+            return false
+        }
+    }
+
     ailmentFunc(pokemon, move) {
         switch (this.name) {
             case "burn":
@@ -192,6 +206,8 @@ class Ailment {
                 return this.paralysisAilment(pokemon)
             case "poison":
                 return this.poisonAilment(pokemon)
+            case "sleep":
+                return this.sleepAilment(pokemon)
             default:
                 console.log("Pokemon does not have an ailment.");
                 break;
@@ -209,5 +225,5 @@ export {
     Ailment
 }
 
-// Poison side effects
-// 1/8 of total hp every turn
+// Sleep Side Effects
+// Lasts 1 to 3 turns randomly chosen (If pokemon uses Rest, it is exactly two turns)
