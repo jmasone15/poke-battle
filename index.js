@@ -230,33 +230,73 @@ const battleSequence = async (userPokemon, sysPokemon) => {
     }
 
     while (true) {
-        console.clear();
-
         let { userMove, systemMove } = await battleMoves(userPokemon, sysPokemon.moves);
         let userFirst = doesUserMoveFirst(userPokemon, sysPokemon, userMove, systemMove);
 
-        // First Move
-        const moveOneResult = await executeMove(
-            userFirst ? userPokemon : sysPokemon,
-            userFirst ? sysPokemon : userPokemon,
-            userFirst ? userMove : systemMove
-        );
-        await helpers.delay(1500);
+        // Before Ailment
+        // Returns true if pokemon can move
+        const ailmentOneResultBefore = await executeBeforeAilment(userFirst ? userPokemon : sysPokemon, userFirst ? userMove : systemMove,);
 
-        if (!moveOneResult) {
-            break;
+        // First Move
+        if (ailmentOneResultBefore) {
+            const moveOneResult = await executeMove(
+                userFirst ? userPokemon : sysPokemon,
+                userFirst ? sysPokemon : userPokemon,
+                userFirst ? userMove : systemMove
+            );
+            await helpers.delay(1500);
+
+            if (!moveOneResult) {
+                break;
+            }
+        } else {
+            const target = userFirst ? userPokemon : sysPokemon;
+            if (target.stats.hp.value <= 0) {
+
+                if (target === userPokemon) {
+                    userPokemon.stats.hp.value = 0;
+                } else {
+                    sysPokemon.stats.hp.value = 0;
+                }
+
+                console.log(`${target.name} has fainted!`);
+                await helpers.delay(1500);
+
+                return false
+            }
         }
 
-        // Second Move
-        const moveTwoResult = await executeMove(
-            userFirst ? sysPokemon : userPokemon,
-            userFirst ? userPokemon : sysPokemon,
-            userFirst ? systemMove : userMove
-        );
-        await helpers.delay(1500);
+        // Before Ailment
+        // Returns true if pokemon can move
+        const ailmentTwoResultBefore = await executeBeforeAilment(userFirst ? sysPokemon : userPokemon, userFirst ? systemMove : userMove,);
 
-        if (!moveTwoResult) {
-            break;
+        // Second Move
+        if (ailmentTwoResultBefore) {
+            const moveTwoResult = await executeMove(
+                userFirst ? sysPokemon : userPokemon,
+                userFirst ? userPokemon : sysPokemon,
+                userFirst ? systemMove : userMove
+            );
+            await helpers.delay(1500);
+
+            if (!moveTwoResult) {
+                break;
+            }
+        } else {
+            const target = userFirst ? sysPokemon : userPokemon;
+            if (target.stats.hp.value <= 0) {
+
+                if (target === userPokemon) {
+                    userPokemon.stats.hp.value = 0;
+                } else {
+                    sysPokemon.stats.hp.value = 0;
+                }
+
+                console.log(`${target.name} has fainted!`);
+                await helpers.delay(1500);
+
+                return false
+            }
         }
 
         const ailmentOneResult = await executeAfterAilment(userFirst ? userPokemon : sysPokemon);
@@ -564,6 +604,16 @@ const damageMove = async (attackPoke, defendPoke, move) => {
     const remainingHealth = defendPoke.stats.hp.value - totalDamage
     defendPoke.stats.hp.value = remainingHealth;
     console.log(`${defendPoke.name} took ${totalDamage} damage!`);
+
+    const ailmentNames = defendPoke.ailments.map(x => x.name);
+    const thawingMove = ["fusion-flare", "flame-wheel", "sacred-fire", "flare-blitz", "scald", "steam-eruption"].includes(move.name);
+
+    // Side Effects
+    if (ailmentNames.includes("freeze") && thawingMove) {
+        defendPoke.ailments = defendPoke.ailments.filter(x => x.name !== "freeze");
+        await helpers.delay(1500);
+        console.log(`${defendPoke.name} was thawed out!`);
+    }
 }
 const statusMoveOrChange = async (attackPoke, defendPoke, move) => {
     let boolStatChange = true;
@@ -624,10 +674,14 @@ const statusMoveOrChange = async (attackPoke, defendPoke, move) => {
     }
 }
 const ailmentMoveOrChange = async (defendPoke, move) => {
+    if (defendPoke.stats.hp.value <= 0) {
+        return;
+    }
+
     let boolAilmentChange = true;
 
     if (move.effect_chance !== null) {
-        boolAilmentChange = helpers.randomInt(100) + 1 <= 100;
+        boolAilmentChange = helpers.randomInt(100) + 1 <= move.effect_chance;
     }
 
     if (boolAilmentChange) {
@@ -635,7 +689,30 @@ const ailmentMoveOrChange = async (defendPoke, move) => {
         // Pokemon can only be affected by one non-volatile ailment at a time.
         const nonVolatileAilment = defendPoke.ailments.filter(x => x.volatile === false)[0];
 
-        if (nonVolatileAilment) {
+        // Speciality Cases
+        let specialityCase = false;
+        switch (move.ailment) {
+            case "freeze":
+                // Ice Type Pokemon cannot be frozen
+                if (defendPoke.isType("ice")) {
+                    specialityCase = true
+                }
+
+                break;
+            case "burn":
+                // Fire Type Pokemon cannot be burned
+                if (defendPoke.isType("fire")) {
+                    specialityCase = true
+                }
+
+                break;
+
+            default:
+                break;
+        }
+
+
+        if (nonVolatileAilment || specialityCase) {
             if (move.category === "ailment") {
                 console.log("But it failed!");
             }
@@ -653,6 +730,9 @@ const ailmentMoveOrChange = async (defendPoke, move) => {
         switch (move.ailment) {
             case "burn":
                 console.log(`${defendPoke.name} was burned!`);
+                break;
+            case "freeze":
+                console.log(`${defendPoke.name} was frozen!`);
                 break;
 
             default:
@@ -733,18 +813,39 @@ const executeAfterAilment = async (pokemon) => {
     const anyAilments = pokemon.ailments.filter(x => x.afterTurn);
 
     if (anyAilments.length !== 0) {
-        anyAilments.forEach((ailment) => {
+
+        for (let i = 0; i < anyAilments.length; i++) {
+            const ailment = anyAilments[i];
+
             ailment.ailmentFunc(pokemon);
-        });
-        await helpers.delay(1500);
-    
-        if (pokemon.stats.hp.value <= 0) {
-            pokemon.stats.hp.value = 0;
-    
-            console.log(`${pokemon.name} has fainted!`);
             await helpers.delay(1500);
-    
-            return false
+
+            if (pokemon.stats.hp.value <= 0) {
+                pokemon.stats.hp.value = 0;
+
+                console.log(`${pokemon.name} has fainted!`);
+                await helpers.delay(1500);
+
+                return false
+            }
+        }
+    }
+
+    return true
+}
+const executeBeforeAilment = async (pokemon, move) => {
+    const anyAilments = pokemon.ailments.filter(x => x.beforeTurn);
+
+    if (anyAilments.length !== 0) {
+        for (let i = 0; i < anyAilments.length; i++) {
+            const ailment = anyAilments[i];
+            const result = ailment.ailmentFunc(pokemon, move);
+
+            await helpers.delay(1500);
+
+            if (!result) {
+                return false
+            }
         }
     }
 

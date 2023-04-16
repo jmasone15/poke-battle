@@ -12,6 +12,13 @@ class Pokemon {
         this.moves = moves;
         this.ailments = [];
     }
+
+    isType(type) {
+        const isTypeOne = type === this.typeOne;
+        const isTypeTwo = type === this.typeTwo;
+
+        return isTypeOne || isTypeTwo
+    }
 }
 
 class Stats {
@@ -118,7 +125,7 @@ class Ailment {
     }
 
     // Also need to update that physical damage is halved when burned
-    burnAilment = (pokemon) => {
+    burnAilment(pokemon) {
         let damage = Math.floor(pokemon.stats.hp.starting / 16);
         if (damage < 1) {
             damage = 1
@@ -130,11 +137,31 @@ class Ailment {
         return;
     }
 
-    ailmentFunc = (pokemon) => {
+    freezeAilment(pokemon, move) {
+        // 20% chance to be unthawed
+        const random = Math.floor(Math.random() * 5) + 1;
+        const isThawed = random === 1;
+        const useableMove = ["fusion-flare", "flame-wheel", "sacred-fire", "flare-blitz", "scald", "steam-eruption"].includes(move.name);
+
+        if (isThawed) {
+            pokemon.ailments = pokemon.ailments.filter(x => x.name !== "freeze");
+            console.log(`${pokemon.name} thawed out!`);
+        } else if (useableMove) {
+            return true
+        } else {
+            console.log(`${pokemon.name} is frozen solid!`);
+        }
+        
+
+        return isThawed
+    }
+
+    ailmentFunc(pokemon, move) {
         switch (this.name) {
             case "burn":
-                this.burnAilment(pokemon)
-                break;
+                return this.burnAilment(pokemon)
+            case "freeze":
+                return this.freezeAilment(pokemon, move)
 
             default:
                 console.log("Pokemon does not have an ailment.");
