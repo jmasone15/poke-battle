@@ -21,6 +21,12 @@ class Pokemon {
 
         return isTypeOne || isTypeTwo
     }
+
+    hasAilment(name) {
+        const filteredAilments = this.ailments.filter(x => x.name === name);
+
+        return filteredAilments.length > 0
+    }
 }
 
 class Stats {
@@ -111,19 +117,36 @@ class Nature {
     }
 }
 
+class Battle {
+    constructor() {
+        this.turn = 0;
+        this.history = [];
+    }
+}
+
+class MoveEvent {
+    constructor(attackPoke, defendPoke, move, moveHit, turn) {
+        this.attackPoke = attackPoke;
+        this.defendPoke = defendPoke;
+        this.move = move;
+        this.moveHit = moveHit;
+        this.turn = turn;
+    }
+}
+
 // Three Types of Status Conditions
 // - Before Turn: [Freeze, Sleep, Infatuation, Flinch, Paralysis, Confusion]
 // - During Turn: [Taunt]
 // - After Turn: [Burn, Poison]
 // - Other: [Can't Escape]
 class Ailment {
-    constructor(name, volatile, trapMoveName) {
+    constructor(name, volatile, trapMoveName, encoreMove) {
         this.name = name;
         this.volatile = volatile;
         this.trapMoveName = trapMoveName;
         this.beforeTurn = ["freeze", "sleep", "paralysis", "confusion"].includes(name);
         this.duringTurn = ["taunt"].includes(name);
-        this.afterTurn = ["burn", "poison", "trap", "curse", "yawn"].includes(name);
+        this.afterTurn = ["burn", "poison", "trap", "curse", "yawn", "encore"].includes(name);
         this.other = ["can't escape"].includes(name);
         switch (this.name) {
             case "sleep":
@@ -135,10 +158,14 @@ class Ailment {
             case "confusion":
                 this.duration = Math.floor(Math.random() * 4) + 1
                 break;
+            case "encore":
+                this.duration = 3
+                break;
             default:
                 break;
         }
-        this.initial = this.name === "yawn"
+        this.initial = this.name === "yawn";
+        this.encoreMove = encoreMove;
     }
 
     // Also need to update that physical damage is halved when burned
@@ -292,6 +319,18 @@ class Ailment {
         return;
     }
 
+    encoreAilment(pokemon) {
+        this.duration--
+
+        if (this.duration == 0) {
+            const filteredAilments = pokemon.ailments.filter(x => x.name !== "encore");
+            pokemon.ailments = filteredAilments;
+            console.log("Encore's effect wore off!");
+        }
+
+        return
+    }
+
     ailmentFunc(pokemon, move) {
         switch (this.name) {
             case "burn":
@@ -312,6 +351,8 @@ class Ailment {
                 return this.curseAilment(pokemon)
             case "yawn":
                 return this.yawnAilment(pokemon)
+            case "encore":
+                return this.encoreAilment(pokemon)
             default:
                 console.log("Pokemon does not have an ailment.");
                 break;
@@ -326,5 +367,7 @@ export {
     Move,
     StatChange,
     Nature,
-    Ailment
+    Ailment,
+    Battle,
+    MoveEvent
 }

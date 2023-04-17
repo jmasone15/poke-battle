@@ -2,6 +2,7 @@
 // All move categories
 // Unqiue category moves
 // Move meta data (flinch, self-stat increase, effects)
+// Struggle
 // Abilities
 // Weather
 // Teams
@@ -13,7 +14,7 @@
 
 import inquirer from "inquirer";
 import axios from "axios";
-import { Pokemon, Stats, Move, Stat, StatChange, Nature, Ailment } from "./classes.js";
+import { Pokemon, Stats, Move, Stat, StatChange, Nature, Ailment, Battle, MoveEvent } from "./classes.js";
 import helpers from "./helpers.js";
 
 // Program Entry Function
@@ -21,11 +22,11 @@ const init = async () => {
     console.clear();
 
     // Inquirer Pokemon Select
-    // let pokemon = await selectPokemon();
+    let pokemon = await selectPokemon();
 
     // Pokemon Creation
-    let userPokemon = await createPokemon("snorlax", false);
-    let sysPokemon = await createPokemon("turtwig", true);
+    let userPokemon = await createPokemon(pokemon, false);
+    let sysPokemon = await createPokemon("caterpie", true);
 
     // Pokemon Battle
     await battleSequence(userPokemon, sysPokemon);
@@ -229,8 +230,12 @@ const battleSequence = async (userPokemon, sysPokemon) => {
         await helpers.delay(1500);
     }
 
+    let battle = new Battle();
+
     while (true) {
-        let { userMove, systemMove } = await battleMoves(userPokemon, sysPokemon.moves);
+        battle.turn++
+
+        let { userMove, systemMove } = await battleMoves(userPokemon, sysPokemon);
         let userFirst = doesUserMoveFirst(userPokemon, sysPokemon, userMove, systemMove);
 
         // Before Ailment
@@ -239,10 +244,21 @@ const battleSequence = async (userPokemon, sysPokemon) => {
 
         // First Move
         if (ailmentOneResultBefore) {
+            const userEncored = userPokemon.hasAilment("encore");
+
+            if (userEncored) {
+                const filteredAilment = userPokemon.ailments.filter(x => x.name === "encore");
+                const filteredMove = userPokemon.moves.filter(x => x.name === filteredAilment[0].encoreMove);
+
+                console.log(filteredMove);
+                userMove = filteredMove[0]
+            }
+
             const moveOneResult = await executeMove(
                 userFirst ? userPokemon : sysPokemon,
                 userFirst ? sysPokemon : userPokemon,
-                userFirst ? userMove : systemMove
+                userFirst ? userMove : systemMove,
+                battle
             );
             await helpers.delay(1500);
 
@@ -272,10 +288,20 @@ const battleSequence = async (userPokemon, sysPokemon) => {
 
         // Second Move
         if (ailmentTwoResultBefore) {
+            const sysEnored = sysPokemon.hasAilment("encore");
+            if (sysEnored) {
+                const filteredAilment = sysPokemon.ailments.filter(x => x.name === "encore");
+                const filteredMove = sysPokemon.moves.filter(x => x.name === filteredAilment[0].encoreMove);
+
+                console.log(filteredMove);
+                systemMove = filteredMove[0]
+            }
+
             const moveTwoResult = await executeMove(
                 userFirst ? sysPokemon : userPokemon,
                 userFirst ? userPokemon : sysPokemon,
-                userFirst ? systemMove : userMove
+                userFirst ? systemMove : userMove,
+                battle
             );
             await helpers.delay(1500);
 
@@ -308,11 +334,13 @@ const battleSequence = async (userPokemon, sysPokemon) => {
         if (!ailmentTwoResult) {
             break;
         }
+
+        console.log(battle);
     }
 
     return;
 }
-const battleMoves = async (userPokemon, systemMoves) => {
+const battleMoves = async (userPokemon, sysPokemon) => {
     const userMoves = userPokemon.moves;
     let moveArray = [];
 
@@ -344,12 +372,12 @@ const battleMoves = async (userPokemon, systemMoves) => {
     if (userMoveText === "View Pokemon Details") {
 
         await viewPokemonDetails(userPokemon, false);
-        return battleMoves(userPokemon, systemMoves);
+        return battleMoves(userPokemon, sysPokemon);
 
     } else {
 
         let userMove = helpers.findArrayElementByProp(userMoves, "name", userMoveText, false);
-        let systemMove = systemMoves[helpers.randomInt(systemMoves.length)];
+        let systemMove = sysPokemon.moves[helpers.randomInt(sysPokemon.moves.length)];
 
         return { userMove, systemMove }
     }
@@ -479,13 +507,16 @@ const doesMoveHit = (accuracy, evasion, moveAccuracy) => {
 
     return random <= hitChance
 }
-const executeMove = async (attackPoke, defendPoke, move) => {
+const executeMove = async (attackPoke, defendPoke, move, battle) => {
 
     console.log(`${attackPoke.name} used ${move.name}!`);
     move.pp--
 
+    const moveHit = doesMoveHit(attackPoke.stats.accuracy.stage, defendPoke.stats.evasion.stage, move.accuracy);
+    battle.history.push(new MoveEvent(attackPoke.name, defendPoke.name, move.name, moveHit, battle.turn));
+
     // Accuracy/Evasion Calculation
-    if (!doesMoveHit(attackPoke.stats.accuracy.stage, defendPoke.stats.evasion.stage, move.accuracy)) {
+    if (!moveHit) {
         await helpers.delay(1500);
         if (attackPoke.stats.accuracy < 0 || move.accuracy < 100) {
             console.log("The attack missed!");
@@ -555,7 +586,7 @@ const executeMove = async (attackPoke, defendPoke, move) => {
             break;
 
         default:
-            await uniqueMove(attackPoke, defendPoke, move);
+            await uniqueMove(attackPoke, defendPoke, move, battle);
             break;
     }
 
@@ -904,7 +935,7 @@ const executeBeforeAilment = async (pokemon, move) => {
 
     return true
 }
-const uniqueMove = async (attackPoke, defendPoke, move) => {
+const uniqueMove = async (attackPoke, defendPoke, move, battle) => {
     switch (move.name) {
         case "curse":
             if (attackPoke.isType("ghost")) {
@@ -949,6 +980,43 @@ const uniqueMove = async (attackPoke, defendPoke, move) => {
                         await helpers.delay(1500);
                     }
                 }
+            }
+            break;
+
+        case "encore":
+            const filteredAilments = defendPoke.ailments.filter(x => x.name === "encore");
+
+            if (filteredAilments.length === 0) {
+                let lastUsedMove;
+                let currentTurn = battle.turn;
+
+                while (true) {
+                    if (currentTurn > 0) {
+
+                        const history = battle.history.filter(x => x.attackPoke === defendPoke.name && x.turn === currentTurn);
+
+                        if (history.length == 0) {
+                            currentTurn--
+                            continue;
+                        } else {
+                            lastUsedMove = defendPoke.moves.filter(x => x.name === history[0].move)[0];
+                            if (["transform", "mimic", "sketch", "mirror-move", "sleep-talk", "encore", "struggle"].includes(lastUsedMove.name) || lastUsedMove.pp == 0) {
+                                console.log("But it failed!");
+                                return;
+                            } else {
+                                defendPoke.ailments.push(new Ailment("encore", true, "", history[0].move))
+                                console.log(`${defendPoke.name} has been encored!`);
+                                break;
+                            }
+                        }
+                    } else {
+                        console.log("But it failed!");
+                        return;
+                    }
+                }
+
+            } else {
+                console.log("But it failed!");
             }
             break;
 
