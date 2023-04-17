@@ -168,7 +168,8 @@ const createMoveClass = async (url) => {
         moveData.meta.crit_rate,
         moveData.meta.category.name,
         moveData.meta.ailment.name,
-        moveData.effect_chance
+        moveData.effect_chance,
+        moveData.meta.flinch_chance
     );
 }
 const createPokeClass = async ({ name, types, stats, species }, moves) => {
@@ -237,6 +238,7 @@ const battleSequence = async (userPokemon, sysPokemon) => {
 
         let { userMove, systemMove } = await battleMoves(userPokemon, sysPokemon);
         let userFirst = doesUserMoveFirst(userPokemon, sysPokemon, userMove, systemMove);
+        let flinched;
 
         // Before Ailment
         // Returns true if pokemon can move
@@ -250,7 +252,6 @@ const battleSequence = async (userPokemon, sysPokemon) => {
                 const filteredAilment = userPokemon.ailments.filter(x => x.name === "encore");
                 const filteredMove = userPokemon.moves.filter(x => x.name === filteredAilment[0].encoreMove);
 
-                console.log(filteredMove);
                 userMove = filteredMove[0]
             }
 
@@ -265,6 +266,8 @@ const battleSequence = async (userPokemon, sysPokemon) => {
             if (!moveOneResult) {
                 break;
             }
+            flinched = didPokemonFlinch(userFirst ? userMove.flinchChance : systemMove.flinchChance)
+
         } else {
             const target = userFirst ? userPokemon : sysPokemon;
             if (target.stats.hp.value <= 0) {
@@ -282,60 +285,63 @@ const battleSequence = async (userPokemon, sysPokemon) => {
             }
         }
 
-        // Before Ailment
-        // Returns true if pokemon can move
-        const ailmentTwoResultBefore = await executeBeforeAilment(userFirst ? sysPokemon : userPokemon, userFirst ? systemMove : userMove);
-
-        // Second Move
-        if (ailmentTwoResultBefore) {
-            const sysEnored = sysPokemon.hasAilment("encore");
-            if (sysEnored) {
-                const filteredAilment = sysPokemon.ailments.filter(x => x.name === "encore");
-                const filteredMove = sysPokemon.moves.filter(x => x.name === filteredAilment[0].encoreMove);
-
-                console.log(filteredMove);
-                systemMove = filteredMove[0]
-            }
-
-            const moveTwoResult = await executeMove(
-                userFirst ? sysPokemon : userPokemon,
-                userFirst ? userPokemon : sysPokemon,
-                userFirst ? systemMove : userMove,
-                battle
-            );
+        if (flinched) {
+            console.log(`${userFirst ? sysPokemon.name : userPokemon.name} flinched!`);
             await helpers.delay(1500);
-
-            if (!moveTwoResult) {
-                break;
-            }
         } else {
-            const target = userFirst ? sysPokemon : userPokemon;
-            if (target.stats.hp.value <= 0) {
+            // Before Ailment
+            // Returns true if pokemon can move
+            const ailmentTwoResultBefore = await executeBeforeAilment(userFirst ? sysPokemon : userPokemon, userFirst ? systemMove : userMove);
 
-                if (target === userPokemon) {
-                    userPokemon.stats.hp.value = 0;
-                } else {
-                    sysPokemon.stats.hp.value = 0;
+            // Second Move
+            if (ailmentTwoResultBefore) {
+                const sysEnored = sysPokemon.hasAilment("encore");
+                if (sysEnored) {
+                    const filteredAilment = sysPokemon.ailments.filter(x => x.name === "encore");
+                    const filteredMove = sysPokemon.moves.filter(x => x.name === filteredAilment[0].encoreMove);
+
+                    console.log(filteredMove);
+                    systemMove = filteredMove[0]
                 }
 
-                console.log(`${target.name} has fainted!`);
+                const moveTwoResult = await executeMove(
+                    userFirst ? sysPokemon : userPokemon,
+                    userFirst ? userPokemon : sysPokemon,
+                    userFirst ? systemMove : userMove,
+                    battle
+                );
                 await helpers.delay(1500);
 
-                return false
+                if (!moveTwoResult) {
+                    break;
+                }
+            } else {
+                const target = userFirst ? sysPokemon : userPokemon;
+                if (target.stats.hp.value <= 0) {
+
+                    if (target === userPokemon) {
+                        userPokemon.stats.hp.value = 0;
+                    } else {
+                        sysPokemon.stats.hp.value = 0;
+                    }
+
+                    console.log(`${target.name} has fainted!`);
+                    await helpers.delay(1500);
+
+                    return false
+                }
             }
         }
 
-        const ailmentOneResult = await executeAfterAilment(userFirst ? userPokemon : sysPokemon, userFirst ? systemMove : userMove);
-        if (!ailmentOneResult) {
+        const ailmentOneResultAfter = await executeAfterAilment(userFirst ? userPokemon : sysPokemon, userFirst ? systemMove : userMove);
+        if (!ailmentOneResultAfter) {
             break;
         }
 
-        const ailmentTwoResult = await executeAfterAilment(userFirst ? sysPokemon : userPokemon, userFirst ? userMove : systemMove);
-        if (!ailmentTwoResult) {
+        const ailmentTwoResultAfter = await executeAfterAilment(userFirst ? sysPokemon : userPokemon, userFirst ? userMove : systemMove);
+        if (!ailmentTwoResultAfter) {
             break;
         }
-
-        console.log(battle);
     }
 
     return;
@@ -641,7 +647,7 @@ const statusMoveOrChange = async (attackPoke, defendPoke, move) => {
     let boolStatChange = true;
 
     if (move.effect_chance !== null) {
-        boolStatChange = helpers.randomInt(100) + 1 <= 100;
+        boolStatChange = helpers.randomInt(100) + 1 <= move.effect_chance;
     }
 
     if (boolStatChange) {
@@ -1022,6 +1028,15 @@ const uniqueMove = async (attackPoke, defendPoke, move, battle) => {
 
         default:
             break;
+    }
+}
+const didPokemonFlinch = (flinchChance) => {
+    console.log("test");
+    if (flinchChance > 0) {
+        console.log(helpers.randomInt(100) + 1 <= flinchChance);
+        return helpers.randomInt(100) + 1 <= flinchChance
+    } else {
+        return false
     }
 }
 

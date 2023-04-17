@@ -54,7 +54,7 @@ class Stat {
 }
 
 class Move {
-    constructor(name, description, type, power, pp, damageClass, statChanges, accuracy, priority, critRate, category, ailment, effectChance) {
+    constructor(name, description, type, power, pp, damageClass, statChanges, accuracy, priority, critRate, category, ailment, effectChance, flinchChance) {
         this.name = name;
         this.description = description;
         this.type = type;
@@ -68,6 +68,7 @@ class Move {
         this.category = category;
         this.ailment = ailment;
         this.effectChance = effectChance;
+        this.flinchChance = flinchChance;
     }
 }
 
@@ -134,11 +135,6 @@ class MoveEvent {
     }
 }
 
-// Three Types of Status Conditions
-// - Before Turn: [Freeze, Sleep, Infatuation, Flinch, Paralysis, Confusion]
-// - During Turn: [Taunt]
-// - After Turn: [Burn, Poison]
-// - Other: [Can't Escape]
 class Ailment {
     constructor(name, volatile, trapMoveName, encoreMove) {
         this.name = name;
