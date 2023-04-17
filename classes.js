@@ -141,7 +141,6 @@ class Ailment {
         this.volatile = volatile;
         this.trapMoveName = trapMoveName;
         this.beforeTurn = ["freeze", "sleep", "paralysis", "confusion"].includes(name);
-        this.duringTurn = ["taunt"].includes(name);
         this.afterTurn = ["burn", "poison", "trap", "curse", "yawn", "encore"].includes(name);
         this.other = ["can't escape"].includes(name);
         switch (this.name) {

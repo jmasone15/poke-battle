@@ -22,11 +22,11 @@ const init = async () => {
     console.clear();
 
     // Inquirer Pokemon Select
-    let pokemon = await selectPokemon();
+    // let pokemon = await selectPokemon();
 
     // Pokemon Creation
-    let userPokemon = await createPokemon(pokemon, false);
-    let sysPokemon = await createPokemon("caterpie", true);
+    let userPokemon = await createPokemon("geodude", false);
+    let sysPokemon = await createPokemon("starly", true);
 
     // Pokemon Battle
     await battleSequence(userPokemon, sysPokemon);
@@ -424,13 +424,19 @@ const calculateStatDamage = (attackPoke, defendPoke, move) => {
 }
 const calculateDamage = (attackPoke, defendPoke, move) => {
     const { attackNum, defenseNum } = calculateStatDamage(attackPoke, defendPoke, move);
-    const typeOneMod = helpers.typeMatrix(move.type, defendPoke.typeOne);
-    const typeTwoMod = !defendPoke.typeTwo ? 1 : helpers.typeMatrix(move.type, defendPoke.typeTwo);
+    let typeOneMod = helpers.typeMatrix(move.type, defendPoke.typeOne);
+    let typeTwoMod = !defendPoke.typeTwo ? 1 : helpers.typeMatrix(move.type, defendPoke.typeTwo);
     let finalAttackNum;
 
-    const filteredAilments = defendPoke.ailments.filter(x => x.name === "burn");
+    if (defendPoke.isType("flying") && move.type === "ground" && defendPoke.hasAilment("grounded")) {
+        if (defendPoke.typeOne === "flying") {
+            typeOneMod = 1
+        } else {
+            typeTwoMod = 1
+        }
+    }
 
-    if (filteredAilments.length > 0 && move.damageClass === "physical") {
+    if (defendPoke.hasAilment("burn") && move.damageClass === "physical") {
         finalAttackNum = Math.floor(attackNum * 0.5);
     } else {
         finalAttackNum = attackNum
@@ -538,6 +544,9 @@ const executeMove = async (attackPoke, defendPoke, move, battle) => {
     switch (move.category) {
         case "damage":
             await damageMove(attackPoke, defendPoke, move);
+            if (move.ailment !== "none") {
+                await ailmentMoveOrChange(defendPoke, move);
+            }
             break;
 
         case "ailment":
@@ -788,6 +797,22 @@ const ailmentMoveOrChange = async (defendPoke, move) => {
             return;
         }
 
+        if (move.ailment === "unknown") {
+            if (move.name === "smack-down" || move.name === "thousand-arrows") {
+                if (!defendPoke.hasAilment("grounded")) {
+                    const groundedAilment = new Ailment("grounded", true);
+                    defendPoke.ailments.push(groundedAilment);
+                    console.log(`${defendPoke.name} was grounded!`);
+
+                    console.log(defendPoke.ailments);
+
+                    // Undo the effects of magnetic rise or telekensis
+                }
+
+                return;
+            }
+        }
+
         const newAilment = new Ailment(
             move.ailment,
             !["burn", "freeze", "paralysis", "poison", "sleep"].includes(move.ailment),
@@ -797,8 +822,6 @@ const ailmentMoveOrChange = async (defendPoke, move) => {
         defendPoke.ailments.push(
             newAilment
         );
-
-        console.log(newAilment);
 
         switch (move.ailment) {
             case "burn":
@@ -1031,7 +1054,6 @@ const uniqueMove = async (attackPoke, defendPoke, move, battle) => {
     }
 }
 const didPokemonFlinch = (flinchChance) => {
-    console.log("test");
     if (flinchChance > 0) {
         console.log(helpers.randomInt(100) + 1 <= flinchChance);
         return helpers.randomInt(100) + 1 <= flinchChance

@@ -237,7 +237,6 @@ const determineNature = () => {
 
     return natureArray[randomInt(25)];
 }
-
 const determineStatStage = ({ value, stage }) => {
     switch (stage) {
         case -6:
