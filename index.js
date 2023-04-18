@@ -22,11 +22,11 @@ const init = async () => {
     console.clear();
 
     // Inquirer Pokemon Select
-    // let pokemon = await selectPokemon();
+    let pokemon = await selectPokemon();
 
     // Pokemon Creation
-    let userPokemon = await createPokemon("geodude", false);
-    let sysPokemon = await createPokemon("starly", true);
+    let userPokemon = await createPokemon(pokemon, false);
+    let sysPokemon = await createPokemon("caterpie", true);
 
     // Pokemon Battle
     await battleSequence(userPokemon, sysPokemon);
@@ -436,6 +436,27 @@ const calculateDamage = (attackPoke, defendPoke, move) => {
         }
     }
 
+    if (defendPoke.hasAilment("no-type-immunity")) {
+        const filteredAilment = defendPoke.ailments.filter(x => x.name === "no-type-immunity")[0]
+        if (filteredAilment.immunityMove === "miracle-eye") {
+            if (defendPoke.isType("dark") && move.type === "psychic") {
+                if (defendPoke.typeOne === "dark") {
+                    typeOneMod = 1
+                } else {
+                    typeTwoMod = 1
+                }
+            }
+        } else {
+            if (defendPoke.isType("ghost") && (move.type === "normal" || move.type === "fighting")) {
+                if (defendPoke.typeOne === "ghost") {
+                    typeOneMod = 1
+                } else {
+                    typeTwoMod = 1
+                }
+            }
+        }
+    }
+
     if (defendPoke.hasAilment("burn") && move.damageClass === "physical") {
         finalAttackNum = Math.floor(attackNum * 0.5);
     } else {
@@ -457,10 +478,16 @@ const calculateDamage = (attackPoke, defendPoke, move) => {
         damageObject
     }
 }
-const doesMoveHit = (accuracy, evasion, moveAccuracy) => {
+const doesMoveHit = (accuracy, defendPoke, moveAccuracy) => {
+
+    let evasion = defendPoke.stats.evasion.stage;
 
     if (moveAccuracy === null) {
         return true;
+    }
+
+    if (defendPoke.hasAilment("no-type-immunity")) {
+        evasion = 0
     }
 
     const combinedStage = accuracy - evasion;
@@ -524,7 +551,7 @@ const executeMove = async (attackPoke, defendPoke, move, battle) => {
     console.log(`${attackPoke.name} used ${move.name}!`);
     move.pp--
 
-    const moveHit = doesMoveHit(attackPoke.stats.accuracy.stage, defendPoke.stats.evasion.stage, move.accuracy);
+    const moveHit = doesMoveHit(attackPoke.stats.accuracy.stage, defendPoke, move.accuracy);
     battle.history.push(new MoveEvent(attackPoke.name, defendPoke.name, move.name, moveHit, battle.turn));
 
     // Accuracy/Evasion Calculation
@@ -655,8 +682,8 @@ const damageMove = async (attackPoke, defendPoke, move) => {
 const statusMoveOrChange = async (attackPoke, defendPoke, move) => {
     let boolStatChange = true;
 
-    if (move.effect_chance !== null) {
-        boolStatChange = helpers.randomInt(100) + 1 <= move.effect_chance;
+    if (move.effectChance !== null) {
+        boolStatChange = helpers.randomInt(100) + 1 <= move.effectChance;
     }
 
     if (boolStatChange) {
@@ -717,10 +744,10 @@ const ailmentMoveOrChange = async (defendPoke, move) => {
         return;
     }
 
-    if (move.effect_chance === null || move.effect_chance === undefined) {
+    if (move.effectChance === null || move.effectChance === undefined) {
         boolAilmentChange = true
     } else {
-        boolAilmentChange = helpers.randomInt(100) + 1 <= move.effect_chance;
+        boolAilmentChange = helpers.randomInt(100) + 1 <= move.effectChance;
     }
 
     if (boolAilmentChange) {
@@ -728,6 +755,7 @@ const ailmentMoveOrChange = async (defendPoke, move) => {
         // Pokemon can only be affected by one non-volatile ailment at a time.
         const nonVolatileAilment = defendPoke.ailments.filter(x => x.volatile === false)[0];
         const existingAilment = defendPoke.ailments.filter(x => x.name === move.ailment);
+        let newAilment;
 
         // Speciality Cases
         let specialityCase = false;
@@ -800,24 +828,19 @@ const ailmentMoveOrChange = async (defendPoke, move) => {
         if (move.ailment === "unknown") {
             if (move.name === "smack-down" || move.name === "thousand-arrows") {
                 if (!defendPoke.hasAilment("grounded")) {
-                    const groundedAilment = new Ailment("grounded", true);
-                    defendPoke.ailments.push(groundedAilment);
-                    console.log(`${defendPoke.name} was grounded!`);
-
-                    console.log(defendPoke.ailments);
-
+                    newAilment = new Ailment("grounded", true);
                     // Undo the effects of magnetic rise or telekensis
                 }
-
-                return;
             }
+        } else {
+            newAilment = new Ailment(
+                move.ailment,
+                !["burn", "freeze", "paralysis", "poison", "sleep"].includes(move.ailment),
+                move.ailment === "trap" ? move.name : "",
+                "",
+                move.ailment === "no-type-immunity" ? move.name : ""
+            )
         }
-
-        const newAilment = new Ailment(
-            move.ailment,
-            !["burn", "freeze", "paralysis", "poison", "sleep"].includes(move.ailment),
-            move.ailment === "trap" ? move.name : ""
-        )
 
         defendPoke.ailments.push(
             newAilment
@@ -848,9 +871,17 @@ const ailmentMoveOrChange = async (defendPoke, move) => {
             case "yawn":
                 console.log(`${defendPoke.name} became drowsy!`);
                 break;
+            case "grounded":
+                console.log(`${defendPoke.name} was grounded!`);
+                break;
+            case "no-type-immunity":
+                console.log(`${defendPoke.name} was identified!`);
+                break;
             default:
                 break;
         }
+
+        console.log(newAilment);
 
         await helpers.delay(1500);
     }

@@ -136,7 +136,7 @@ class MoveEvent {
 }
 
 class Ailment {
-    constructor(name, volatile, trapMoveName, encoreMove) {
+    constructor(name, volatile, trapMoveName, encoreMove, immunityMove) {
         this.name = name;
         this.volatile = volatile;
         this.trapMoveName = trapMoveName;
@@ -161,6 +161,7 @@ class Ailment {
         }
         this.initial = this.name === "yawn";
         this.encoreMove = encoreMove;
+        this.immunityMove = immunityMove;
     }
 
     // Also need to update that physical damage is halved when burned
